@@ -8,6 +8,18 @@ import { config } from './config';
 import { CIS360SupportBot } from './bot';
 
 // 1. Create authentication credentials factory and credentials provider
+console.log('--- Active Bot Configuration ---');
+console.log(`- MicrosoftAppId:       "${config.microsoftAppId}"`);
+console.log(`- MicrosoftAppType:     "${config.microsoftAppType}"`);
+console.log(`- MicrosoftAppTenantId: "${config.microsoftAppTenantId}"`);
+console.log(`- MicrosoftAppPassword: ${config.microsoftAppPassword ? '**** (Set)' : 'Empty (Testing/Emulator)'}`);
+console.log('--------------------------------');
+
+if (config.microsoftAppType === 'SingleTenant' && !config.microsoftAppTenantId) {
+  console.error('\n❌ CONFIGURATION ERROR: MicrosoftAppTenantId is required when MicrosoftAppType is set to "SingleTenant".');
+  console.error('👉 Action needed: Add MicrosoftAppTenantId (or MicrosoftAppTenantID / TenantId) in your Azure Web App Configuration Settings.\n');
+}
+
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
   MicrosoftAppId: config.microsoftAppId,
   MicrosoftAppPassword: config.microsoftAppPassword,

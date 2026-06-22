@@ -5,10 +5,10 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 export const config = {
   port: process.env.PORT || '3978',
-  microsoftAppId: process.env.MicrosoftAppId || '',
-  microsoftAppPassword: process.env.MicrosoftAppPassword || '',
-  microsoftAppType: process.env.MicrosoftAppType || 'MultiTenant',
-  microsoftAppTenantId: process.env.MicrosoftAppTenantId || '',
+  microsoftAppId: process.env.MicrosoftAppId || process.env.MicrosoftAppID || process.env.MICROSOFT_APP_ID || '',
+  microsoftAppPassword: process.env.MicrosoftAppPassword || process.env.MicrosoftAppPASSWORD || process.env.MICROSOFT_APP_PASSWORD || '',
+  microsoftAppType: process.env.MicrosoftAppType || process.env.MICROSOFT_APP_TYPE || 'MultiTenant',
+  microsoftAppTenantId: process.env.MicrosoftAppTenantId || process.env.MicrosoftAppTenantID || process.env.MICROSOFT_APP_TENANT_ID || process.env.TenantId || process.env.TenantID || '',
   serviceNowMock: process.env.SERVICENOW_MOCK === 'true',
   serviceNowUrl: process.env.SERVICENOW_URL || '',
   serviceNowUsername: process.env.SERVICENOW_USERNAME || '',
