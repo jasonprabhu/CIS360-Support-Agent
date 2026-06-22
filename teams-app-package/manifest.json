@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.15/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.15",
+  "version": "1.0.0",
+  "id": "f598bc5d-5bdc-483a-a254-3ba923e38d63",
+  "packageName": "com.cis360.support",
+  "developer": {
+    "name": "CIS360 Support Team",
+    "websiteUrl": "https://github.com/jasonprabhu/CIS360-Support-Agent",
+    "privacyUrl": "https://github.com/jasonprabhu/CIS360-Support-Agent/blob/main/PRIVACY.md",
+    "termsOfUseUrl": "https://github.com/jasonprabhu/CIS360-Support-Agent/blob/main/TERMS.md"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "CIS Support Agent",
+    "full": "CIS360 Support & Administration Portal"
+  },
+  "description": {
+    "short": "L1 M365 admin assistant and ServiceNow portal.",
+    "full": "Automated level-1 administration bot supporting 50 M365 tenant actions, licensing updates, group management, and ServiceNow incident routing."
+  },
+  "accentColor": "#5C2D91",
+  "bots": [
+    {
+      "botId": "f598bc5d-5bdc-483a-a254-3ba923e38d63",
+      "scopes": ["personal", "team"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": []
+}
