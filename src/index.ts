@@ -80,6 +80,10 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
+app.get('/api/messages', (req, res) => {
+  res.send('🚀 CIS360 Support Bot messaging webhook endpoint is active. Please use Microsoft Teams or Bot Framework Emulator to connect.');
+});
+
 // Simple status probe endpoint for health checks
 app.get('/api/status', (req, res) => {
   res.json({

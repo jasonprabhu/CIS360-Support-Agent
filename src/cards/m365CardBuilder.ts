@@ -880,4 +880,261 @@ export class M365CardBuilder {
 
     return this.toAttachment(card);
   }
+
+  /**
+   * Translates a usecase code into its human-readable title
+   */
+  public static getUseCaseName(ucCode: string): string {
+    switch (ucCode) {
+      case 'UC001': return 'Create User';
+      case 'UC002': return 'Update Display Name';
+      case 'UC003': return 'Update Job Title';
+      case 'UC004': return 'Update Department';
+      case 'UC005': return 'Update Manager';
+      case 'UC008': return 'Reset Password';
+      case 'UC010': return 'Block Sign-in';
+      case 'UC011': return 'Unblock Sign-in';
+      case 'UC012': return 'Delete User';
+      case 'UC013': return 'Assign License';
+      case 'UC014': return 'Remove License';
+      case 'UC015': return 'Check User License';
+      case 'UC016': return 'Check Available Licenses';
+      case 'UC020': return 'Find Unlicensed Users';
+      case 'UC021': return 'Create Security Group';
+      case 'UC022': return 'Create M365 Group';
+      case 'UC023': return 'Add Member to Group';
+      case 'UC024': return 'Remove Member from Group';
+      case 'UC025': return 'View Group Members';
+      case 'UC026': return 'Update Group Owner';
+      case 'UC027': return 'Hide Group from GAL';
+      case 'UC028': return 'Rename Group';
+      case 'UC029': return 'Create Shared Mailbox';
+      case 'UC030': return 'Delete Shared Mailbox';
+      case 'UC031': return 'Add Mailbox Delegate';
+      case 'UC032': return 'Remove Mailbox Delegate';
+      case 'UC036': return 'Check Mailbox Permissions';
+      case 'UC037': return 'Enable Mail Forwarding';
+      case 'UC038': return 'Disable Mail Forwarding';
+      case 'UC039': return 'Set Automatic Reply';
+      case 'UC040': return 'Disable Automatic Reply';
+      case 'UC041': return 'Increase Mailbox Quota';
+      case 'UC042': return 'Check Mailbox Size';
+      case 'UC043': return 'Convert Mailbox to Shared';
+      case 'UC044': return 'Check OneDrive Storage';
+      case 'UC045': return 'Grant OneDrive Access';
+      case 'UC046': return 'Restore OneDrive Files';
+      case 'UC047': return 'Generate Sharing Report';
+      case 'UC048': return 'Create SharePoint Site';
+      case 'UC049': return 'Add User to SharePoint Site';
+      case 'UC050': return 'Check SharePoint Permissions';
+      default: return `M365 Task (${ucCode})`;
+    }
+  }
+
+  /**
+   * Generates the Review & Confirm card for the user
+   */
+  public static reviewAndConfirmCard(ucCode: string, parameters: any): Attachment {
+    const ucName = this.getUseCaseName(ucCode);
+    const facts = Object.entries(parameters).map(([key, val]) => ({
+      title: key.charAt(0).toUpperCase() + key.slice(1) + ':',
+      value: String(val)
+    }));
+
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.5',
+      body: [
+        {
+          type: 'Container',
+          style: 'accent',
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: '📋 Review & Confirm',
+              weight: 'Bolder',
+              size: 'Large'
+            },
+            {
+              type: 'TextBlock',
+              text: `Please review the details for **${ucName}** (${ucCode}) below.`,
+              size: 'Small',
+              isSubtle: true,
+              spacing: 'None'
+            }
+          ]
+        },
+        {
+          type: 'TextBlock',
+          text: 'Request Details:',
+          weight: 'Bolder',
+          spacing: 'Medium'
+        },
+        {
+          type: 'FactSet',
+          facts: facts,
+          spacing: 'Small'
+        },
+        {
+          type: 'TextBlock',
+          text: 'Confirming will initiate execution (or request manager approval if required).',
+          wrap: true,
+          isSubtle: true,
+          size: 'Small',
+          spacing: 'Medium'
+        }
+      ],
+      actions: [
+        {
+          type: 'Action.Submit',
+          title: 'Confirm & Proceed',
+          data: {
+            action: 'm365_confirm_request',
+            uc: ucCode,
+            ...parameters
+          }
+        },
+        {
+          type: 'Action.Submit',
+          title: 'Cancel',
+          data: {
+            action: 'm365_menu'
+          }
+        }
+      ]
+    };
+
+    return this.toAttachment(card);
+  }
+
+  /**
+   * Generates the manager approval request card
+   */
+  public static managerApprovalRequestCard(
+    requestorUpn: string,
+    ucCode: string,
+    parameters: any,
+    requestId: string
+  ): Attachment {
+    const ucName = this.getUseCaseName(ucCode);
+    const facts = Object.entries(parameters).map(([key, val]) => ({
+      title: key.charAt(0).toUpperCase() + key.slice(1) + ':',
+      value: String(val)
+    }));
+
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.5',
+      body: [
+        {
+          type: 'Container',
+          style: 'warning',
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: '🔐 Manager Approval Request',
+              weight: 'Bolder',
+              size: 'Medium'
+            }
+          ]
+        },
+        {
+          type: 'TextBlock',
+          text: `**${requestorUpn}** has submitted a request requiring your authorization.`,
+          wrap: true,
+          spacing: 'Medium'
+        },
+        {
+          type: 'FactSet',
+          facts: [
+            { title: 'Requested Action:', value: `${ucName} (${ucCode})` },
+            ...facts
+          ],
+          spacing: 'Medium'
+        }
+      ],
+      actions: [
+        {
+          type: 'Action.Submit',
+          title: 'Approve Request',
+          data: {
+            action: 'm365_manager_decision',
+            decision: 'approve',
+            requestId: requestId
+          }
+        },
+        {
+          type: 'Action.Submit',
+          title: 'Reject Request',
+          data: {
+            action: 'm365_manager_decision',
+            decision: 'reject',
+            requestId: requestId
+          }
+        }
+      ]
+    };
+
+    return this.toAttachment(card);
+  }
+
+  /**
+   * Updates the manager's card when they approve/reject the request
+   */
+  public static approvalOutcomeCard(
+    status: 'Approved' | 'Rejected',
+    requestorUpn: string,
+    ucCode: string,
+    parameters: any
+  ): Attachment {
+    const ucName = this.getUseCaseName(ucCode);
+    const facts = Object.entries(parameters).map(([key, val]) => ({
+      title: key.charAt(0).toUpperCase() + key.slice(1) + ':',
+      value: String(val)
+    }));
+
+    const style = status === 'Approved' ? 'good' : 'attention';
+    const bannerText = status === 'Approved' ? '✅ Request Approved' : '❌ Request Rejected';
+
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.5',
+      body: [
+        {
+          type: 'Container',
+          style: style,
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: bannerText,
+              weight: 'Bolder',
+              size: 'Medium'
+            }
+          ]
+        },
+        {
+          type: 'TextBlock',
+          text: `This request from **${requestorUpn}** has been **${status.toLowerCase()}** and processed.`,
+          wrap: true,
+          spacing: 'Medium'
+        },
+        {
+          type: 'FactSet',
+          facts: [
+            { title: 'Action:', value: `${ucName} (${ucCode})` },
+            ...facts
+          ],
+          spacing: 'Medium'
+        }
+      ]
+    };
+
+    return this.toAttachment(card);
+  }
 }

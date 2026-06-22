@@ -5,7 +5,8 @@ import {
   CardFactory,
   ActivityTypes,
   ConversationReference,
-  ConversationAccount
+  ConversationAccount,
+  TeamsInfo
 } from 'botbuilder';
 import { config } from './config';
 import { CardBuilder } from './cards/cardBuilder';
@@ -14,6 +15,9 @@ import { ServiceNowService } from './services/servicenow';
 import { M365CardBuilder, AuditTrail } from './cards/m365CardBuilder';
 import { GraphService } from './services/graphService';
 import { ExchangeService } from './services/exchangeService';
+import { AIService } from './services/aiService';
+import { ApprovalService } from './services/approvalService';
+
 
 export class CIS360SupportBot extends TeamsActivityHandler {
   constructor() {
@@ -51,9 +55,9 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         await next();
         return;
       }
-
-      // C. Fallback to text command parsing
-      const text = (activity.text || '').trim().toLowerCase();
+      // C. Fallback to text command parsing or NL Dialog
+      const rawText = (activity.text || '').trim();
+      const text = rawText.toLowerCase();
       const ucMatch = text.match(/^\/?(uc\d{3})$/);
 
       if (text === 'help' || text === 'menu') {
@@ -72,10 +76,9 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       } else if (text === 'escalate' || text === 'human' || text === 'agent') {
         const card = CardBuilder.escalationFormCard();
         await context.sendActivity({ attachments: [card] });
-      } else {
-        // All responses MUST be in adaptive cards
-        const defaultCard = CardBuilder.welcomeCard(userName);
-        await context.sendActivity({ attachments: [defaultCard] });
+      } else if (rawText) {
+        // Route to natural language parser
+        await this.handleNaturalLanguageInput(context, rawText);
       }
 
       await next();
@@ -273,19 +276,24 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       case 'm365_form':
         await context.sendActivity({ attachments: [M365CardBuilder.useCaseInputForm(activity.value.uc)] });
         break;
-
-      case 'm365_run_direct':
-        await this.executeM365UseCase(context, activity.value.uc, {}, false);
+      case 'm365_run_direct': {
+        const uc = activity.value.uc;
+        const card = M365CardBuilder.reviewAndConfirmCard(uc, {});
+        await context.sendActivity({ attachments: [card] });
         break;
+      }
 
       case 'm365_execute':
         await this.handleM365ExecutionRequest(context);
         break;
 
-      case 'm365_execute_confirmed':
-        await this.executeM365UseCase(context, activity.value.uc, activity.value, true);
+      case 'm365_confirm_request':
+        await this.handleM365ConfirmRequest(context);
         break;
 
+      case 'm365_manager_decision':
+        await this.handleM365ManagerDecision(context);
+        break;
       default:
         console.log(`[Card Action] Unknown card action: ${action}`);
         await context.sendActivity({
@@ -570,22 +578,327 @@ export class CIS360SupportBot extends TeamsActivityHandler {
   }
 
   /**
-   * Intercepts execution requests to verify if confirmation is required
+   * Intercepts manual execution requests to present the Review & Confirm card
    */
   private async handleM365ExecutionRequest(context: TurnContext): Promise<void> {
-    const vals = context.activity.value;
+    const vals = { ...context.activity.value };
     const uc = vals.uc;
 
-    // List of risky actions requiring confirmation
-    const riskyActions = ['UC010', 'UC012', 'UC030'];
-    const isRisky = riskyActions.includes(uc);
+    // Remove metadata fields from parameters
+    delete vals.action;
+    delete vals.uc;
 
-    if (isRisky) {
-      const target = vals.userUpn || vals.mailboxUpn || 'Unknown Target';
-      const card = M365CardBuilder.useCaseConfirmationCard(uc, vals, target);
-      await context.sendActivity({ attachments: [card] });
+    const card = M365CardBuilder.reviewAndConfirmCard(uc, vals);
+    await context.sendActivity({ attachments: [card] });
+  }
+
+  /**
+   * Processes a user's natural language request using the OpenAI service
+   */
+  private async handleNaturalLanguageInput(context: TurnContext, text: string): Promise<void> {
+    const userId = context.activity.from.id;
+    
+    // Send typing indicator to Teams
+    await context.sendActivity({ type: ActivityTypes.Typing });
+
+    try {
+      const aiResponse = await AIService.processMessage(userId, text);
+      
+      if (aiResponse.type === 'probe') {
+        const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
+        await context.sendActivity({ attachments: [card] });
+      } else if (aiResponse.type === 'general') {
+        const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
+        await context.sendActivity({ attachments: [card] });
+      } else if (aiResponse.type === 'execute') {
+        // Display Review & Confirm card to the user/requestor before execution
+        const card = M365CardBuilder.reviewAndConfirmCard(aiResponse.ucCode, aiResponse.parameters);
+        await context.sendActivity({ attachments: [card] });
+      }
+    } catch (err: any) {
+      console.error('[NLP Interaction Error] Failed to process message via AI:', err.message);
+      const errCard = CardBuilder.textResponseCard(
+        'NLP Service Unreachable',
+        `I had trouble analyzing your request: ${err.message}. You can type **"m365"** to open the administrative portal forms manually.`,
+        'error'
+      );
+      await context.sendActivity({ attachments: [errCard] });
+    }
+  }
+
+  /**
+   * Resolves the requestor UPN from the active session or Entra ID
+   */
+  private async resolveRequestorUpn(context: TurnContext): Promise<string> {
+    try {
+      const member = await TeamsInfo.getMember(context, context.activity.from.id);
+      if (member && member.userPrincipalName) {
+        return member.userPrincipalName.trim().toLowerCase();
+      }
+    } catch (err: any) {
+      console.log('[UPN Resolve] TeamsInfo lookup failed, falling back to database check.', err.message);
+    }
+
+    const from = context.activity.from as any;
+    if (from.aadObjectId) {
+      try {
+        const user = await GraphService.getUser(from.aadObjectId);
+        if (user) {
+          return user.userPrincipalName.trim().toLowerCase();
+        }
+      } catch (err: any) {
+        console.log('[UPN Resolve] GraphService getUser failed.', err.message);
+      }
+    }
+
+    // Default fallback UPN for tests and simulator
+    return 'adele.vance@tenant.onmicrosoft.com';
+  }
+
+  /**
+   * Determines if a request is self-service (targets the requestor's own profile/mailbox)
+   */
+  private isSelfService(ucCode: string, inputs: any, requestorUpn: string): boolean {
+    const cleanRequestor = requestorUpn.trim().toLowerCase();
+    const targetUpn = (inputs.userUpn || inputs.mailboxUpn || inputs.delegateUpn || '').trim().toLowerCase();
+
+    // Use cases that directly query or modify a specific user's attributes
+    const userSpecificUseCases = [
+      'UC002', 'UC003', 'UC004', 'UC005', 'UC008', 'UC010', 'UC011', 'UC012', 
+      'UC013', 'UC014', 'UC015', 'UC031', 'UC032', 'UC036', 'UC037', 'UC038', 
+      'UC039', 'UC040', 'UC041', 'UC042', 'UC043', 'UC044', 'UC045', 'UC046', 
+      'UC047'
+    ];
+
+    if (userSpecificUseCases.includes(ucCode) && targetUpn === cleanRequestor) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Handles user/requestor consent when clicking "Confirm & Proceed" on the Review & Confirm card
+   */
+  private async handleM365ConfirmRequest(context: TurnContext): Promise<void> {
+    const vals = { ...context.activity.value };
+    const ucCode = vals.uc;
+
+    // Filter metadata
+    delete vals.action;
+    delete vals.uc;
+    const parameters = vals;
+
+    // 1. Resolve requestor UPN
+    const requestorUpn = await this.resolveRequestorUpn(context);
+
+    // 2. Check if request is Self-Service
+    const selfService = this.isSelfService(ucCode, parameters, requestorUpn);
+
+    if (selfService) {
+      // User Level issue/request: execute immediately with user/requestor consent
+      const infoCard = CardBuilder.textResponseCard(
+        'Processing Task',
+        `Self-service request confirmed. Executing **${M365CardBuilder.getUseCaseName(ucCode)}**...`,
+        'info'
+      );
+      await context.sendActivity({ attachments: [infoCard] });
+      await this.executeM365UseCase(context, ucCode, parameters, true);
     } else {
-      await this.executeM365UseCase(context, uc, vals, false);
+      // Non-Self-Service: Require manager approval
+      const requestorUser = await GraphService.getUser(requestorUpn);
+      const managerUpn = requestorUser?.managerUpn;
+
+      if (!managerUpn) {
+        const errCard = CardBuilder.textResponseCard(
+          'Approval Routing Failed',
+          `We could not find a registered manager for **${requestorUpn}** in Entra ID. Administrative changes require manager approval.`,
+          'error'
+        );
+        await context.sendActivity({ attachments: [errCard] });
+        return;
+      }
+
+      // Generate request tracking details
+      const requestId = M365CardBuilder.generateGuid();
+      const userRef = TurnContext.getConversationReference(context.activity);
+      
+      ApprovalService.createRequest(
+        requestId,
+        ucCode,
+        parameters,
+        requestorUpn,
+        userRef as ConversationReference,
+        managerUpn
+      );
+
+      let approvalSent = false;
+      try {
+        const managerUser = await GraphService.getUser(managerUpn);
+        if (managerUser && managerUser.id) {
+          const managerId = managerUser.id;
+
+          // Establish a proactive 1:1 chat with the manager
+          const conversationParams = {
+            bot: context.activity.recipient,
+            members: [{ id: managerId }],
+            isGroup: false,
+            tenantId: context.activity.conversation.tenantId
+          };
+
+          await context.adapter.createConversationAsync(
+            config.microsoftAppId,
+            'msteams',
+            context.activity.serviceUrl,
+            '',
+            conversationParams as any,
+            async (managerContext) => {
+              const approvalCard = M365CardBuilder.managerApprovalRequestCard(
+                requestorUpn,
+                ucCode,
+                parameters,
+                requestId
+              );
+              const response = await managerContext.sendActivity({ attachments: [approvalCard] });
+              if (response && response.id) {
+                ApprovalService.setManagerCardActivityId(requestId, response.id);
+              }
+            }
+          );
+          approvalSent = true;
+        }
+      } catch (err: any) {
+        console.error('[Approval Flow] Failed to send proactive message to manager:', err.message);
+      }
+
+      // Fallback: If proactive chat creation fails (e.g. running in Emulator or tenant restriction),
+      // we send it to the current chat as a simulated manager approval for testing.
+      if (!approvalSent) {
+        const approvalCard = M365CardBuilder.managerApprovalRequestCard(
+          requestorUpn,
+          ucCode,
+          parameters,
+          requestId
+        );
+        const notice = CardBuilder.textResponseCard(
+          'Simulated Manager Chat',
+          `[DEVELOPER MODE] A proactive approval request has been simulated. Approvals are routed to **${managerUpn}**. Use the card below to approve/reject.`,
+          'warning'
+        );
+        await context.sendActivity({ attachments: [notice] });
+        const response = await context.sendActivity({ attachments: [approvalCard] });
+        if (response && response.id) {
+          ApprovalService.setManagerCardActivityId(requestId, response.id);
+        }
+      } else {
+        // Notify requestor that approval is sent to manager
+        const pendingCard = CardBuilder.textResponseCard(
+          'Awaiting Approval',
+          `Your request has been forwarded to your manager (**${managerUpn}**) for approval. Once approved, the task will be executed automatically.`,
+          'warning'
+        );
+        await context.sendActivity({ attachments: [pendingCard] });
+      }
+    }
+  }
+
+  /**
+   * Handles the manager's click on the Approve or Reject action button
+   */
+  private async handleM365ManagerDecision(context: TurnContext): Promise<void> {
+    const vals = context.activity.value;
+    const { decision, requestId } = vals;
+
+    const req = ApprovalService.getRequest(requestId);
+    if (!req) {
+      const expiredCard = CardBuilder.textResponseCard(
+        'Request Expired',
+        'This approval request is no longer valid or expired.',
+        'error'
+      );
+      await context.sendActivity({ attachments: [expiredCard] });
+      return;
+    }
+
+    if (req.status !== 'Pending') {
+      const handledCard = CardBuilder.textResponseCard(
+        'Request Processed',
+        `This request has already been ${req.status.toLowerCase()}.`,
+        'warning'
+      );
+      await context.sendActivity({ attachments: [handledCard] });
+      return;
+    }
+
+    const clickerName = context.activity.from.name || 'Manager';
+
+    if (decision === 'approve') {
+      ApprovalService.updateStatus(requestId, 'Approved');
+
+      // Update the manager's card in place to show Approved outcome
+      try {
+        const outcomeCard = M365CardBuilder.approvalOutcomeCard(
+          'Approved',
+          req.requestorUpn,
+          req.ucCode,
+          req.parameters
+        );
+        const updateActivity = MessageFactory.attachment(outcomeCard);
+        updateActivity.id = context.activity.replyToId || req.managerCardActivityId;
+        updateActivity.conversation = context.activity.conversation;
+        await context.updateActivity(updateActivity);
+      } catch (err: any) {
+        console.error('[Manager Flow] Failed to update approval card:', err.message);
+      }
+
+      // Notify the requestor and execute the M365 task
+      await context.adapter.continueConversationAsync(
+        config.microsoftAppId,
+        req.requestorConversationReference,
+        async (userContext) => {
+          const approvedCard = CardBuilder.textResponseCard(
+            'Request Approved',
+            `Your manager **${clickerName}** has approved your request. Executing task...`,
+            'success'
+          );
+          await userContext.sendActivity({ attachments: [approvedCard] });
+
+          // Execute under userContext so requestor gets the outcome and audit trail card
+          await this.executeM365UseCase(userContext, req.ucCode, req.parameters, true);
+        }
+      );
+    } else {
+      ApprovalService.updateStatus(requestId, 'Rejected');
+
+      // Update the manager's card in place to show Rejected outcome
+      try {
+        const outcomeCard = M365CardBuilder.approvalOutcomeCard(
+          'Rejected',
+          req.requestorUpn,
+          req.ucCode,
+          req.parameters
+        );
+        const updateActivity = MessageFactory.attachment(outcomeCard);
+        updateActivity.id = context.activity.replyToId || req.managerCardActivityId;
+        updateActivity.conversation = context.activity.conversation;
+        await context.updateActivity(updateActivity);
+      } catch (err: any) {
+        console.error('[Manager Flow] Failed to update rejection card:', err.message);
+      }
+
+      // Notify the requestor of cancellation
+      await context.adapter.continueConversationAsync(
+        config.microsoftAppId,
+        req.requestorConversationReference,
+        async (userContext) => {
+          const rejectedCard = CardBuilder.textResponseCard(
+            'Request Rejected',
+            `Your manager **${clickerName}** has rejected your request. The operation has been cancelled.`,
+            'error'
+          );
+          await userContext.sendActivity({ attachments: [rejectedCard] });
+        }
+      );
     }
   }
 

@@ -15,7 +15,8 @@
     "botbuilder": "^4.22.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "isomorphic-fetch": "^3.0.0"
+    "isomorphic-fetch": "^3.0.0",
+    "openai": "^4.33.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

@@ -17,5 +17,8 @@ export const config = {
   m365Mock: process.env.M365_MOCK !== 'false', // Default to true (mocking) if not explicitly set to false
   m365TenantId: process.env.M365_TENANT_ID || '',
   m365ClientId: process.env.M365_CLIENT_ID || '',
-  m365ClientSecret: process.env.M365_CLIENT_SECRET || ''
+  m365ClientSecret: process.env.M365_CLIENT_SECRET || '',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  openaiApiBase: process.env.OPENAI_API_BASE || 'https://api.openai.com/v1'
 };
