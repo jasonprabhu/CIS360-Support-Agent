@@ -4,7 +4,7 @@
   "description": "CIS360 Support Agent for Microsoft Teams with ServiceNow integration and human handoff",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cd control-plane && npm install && npm run build",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
   },

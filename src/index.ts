@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import {
   CloudAdapter,
   ConfigurationServiceClientCredentialFactory,
@@ -92,6 +93,18 @@ app.get('/api/status', (req, res) => {
     serviceNowMode: config.serviceNowMock ? 'MOCK (Simulation)' : 'REAL (REST API)',
     port: config.port
   });
+});
+
+// Serve Control Plane Web App
+const controlPlanePath = path.join(__dirname, '../control-plane/dist');
+app.use(express.static(controlPlanePath));
+
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(controlPlanePath, 'index.html'));
+  } else {
+    res.status(404).send('Not Found');
+  }
 });
 
 // Start the server
