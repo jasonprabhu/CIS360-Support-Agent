@@ -8,6 +8,8 @@ import {
   ConversationAccount,
   TeamsInfo
 } from 'botbuilder';
+import { PasswordResetFlow } from './services/passwordResetFlow';
+import { SettingsService } from './services/settingsService';
 import { config } from './config';
 import { CardBuilder } from './cards/cardBuilder';
 import { HandoffService } from './services/handoff';
@@ -55,9 +57,21 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         await next();
         return;
       }
-      // C. Fallback to text command parsing or NL Dialog
+
+      // Check Password Reset Flow state machine
       const rawText = (activity.text || '').trim();
       const text = rawText.toLowerCase();
+
+      const flowResult = await PasswordResetFlow.handle(context, rawText);
+      if (flowResult.handled) {
+        if (flowResult.triggerHandoff) {
+           await (this as any).initiateHandoff(context, flowResult.category);
+        }
+        await next();
+        return;
+      }
+
+      // C. Fallback to text command parsing or NL Dialog
       const ucMatch = text.match(/^\/?(uc\d{3})$/);
 
       if (text === 'help' || text === 'menu') {
@@ -354,22 +368,31 @@ export class CIS360SupportBot extends TeamsActivityHandler {
   /**
    * Places the user in the human agent escalation queue
    */
-  private async initiateHandoff(context: TurnContext): Promise<void> {
+  private async initiateHandoff(context: TurnContext, category?: string): Promise<void> {
     const activity = context.activity;
     const userId = activity.from.id;
     const userName = activity.from.name || 'User';
-    const escalationDetails = activity.value.escalationDetails || 'No details provided';
+    
+    // Resolve Support Channel ID
+    let supportChannelId = config.supportChannelId;
+    if (category) {
+      const mappings = SettingsService.getSettings().categoryMappings || {};
+      if (mappings[category] && mappings[category].trim() !== '') {
+        supportChannelId = mappings[category];
+      }
+    }
+
+    const escalationDetails = activity.value?.escalationDetails || activity.text || 'User requested human assistance.';
+    const userConversationRef = TurnContext.getConversationReference(activity);
 
     // 1. Create in-memory session mapping
-    const userConversationRef = TurnContext.getConversationReference(activity);
-    HandoffService.createSession(userId, userName, userConversationRef as ConversationReference, escalationDetails);
+    HandoffService.createSession(userId, userName, userConversationRef as ConversationReference, escalationDetails, supportChannelId);
 
     // 2. Notify the user they are placed in the queue
     const userCard = CardBuilder.handoffStatusCard('waiting');
     await context.sendActivity({ attachments: [userCard] });
 
     // 3. Post a request card to the Support Agent Channel
-    const supportChannelId = config.supportChannelId;
     const agentCard = CardBuilder.agentChannelHandoffCard(userName, userId, escalationDetails);
     const channelMessage = MessageFactory.attachment(agentCard);
     
@@ -377,6 +400,18 @@ export class CIS360SupportBot extends TeamsActivityHandler {
     channelMessage.channelData = {
       teamsChannelId: supportChannelId
     };
+
+    const supportConversationRef = {
+      channelId: 'msteams',
+      serviceUrl: activity.serviceUrl,
+      conversation: {
+        isGroup: true,
+        conversationType: 'channel',
+        id: supportChannelId,
+        tenantId: activity.conversation?.tenantId
+      },
+      bot: activity.recipient
+    } as ConversationReference;
 
     try {
       console.log(`[Handoff] Posting escalation ticket to support channel: ${supportChannelId}`);

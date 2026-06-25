@@ -65,7 +65,10 @@ const bot = new CIS360SupportBot();
 
 // 4. Set up Express web server
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+
+import settingsRoutes from './api/settingsRoutes';
+app.use('/api/settings', settingsRoutes);
 
 // Main bot message routing endpoint
 app.post('/api/messages', async (req, res) => {

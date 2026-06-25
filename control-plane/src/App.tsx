@@ -136,6 +136,118 @@ const AuditLogs = () => (
   </div>
 );
 
+const SettingsPage = () => {
+  const [brandName, setBrandName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [categoryMappings, setCategoryMappings] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Extract unique categories from support use cases
+  const categories = Array.from(new Set(supportUseCases.map(uc => uc.category)));
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        setBrandName(data.brandName || '');
+        setLogoUrl(data.logoUrl || '');
+        setCategoryMappings(data.categoryMappings || {});
+      })
+      .catch(err => console.error('Failed to load settings', err));
+  }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCategoryMappingChange = (category: string, channelId: string) => {
+    setCategoryMappings(prev => ({ ...prev, [category]: channelId }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandName, logoUrl, categoryMappings })
+      });
+      alert('Settings saved successfully!');
+    } catch (err) {
+      console.error('Failed to save settings', err);
+      alert('Failed to save settings.');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="page-header">
+        <h2 className="page-title">Settings</h2>
+        <p className="page-subtitle">Configure global bot settings and branding.</p>
+      </div>
+      <div className="ms-card" style={{ padding: '24px', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Brand / Company Name</label>
+          <input 
+            type="text" 
+            value={brandName} 
+            onChange={e => setBrandName(e.target.value)} 
+            style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+            placeholder="e.g. Acme Corp" 
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Bot Logo</label>
+          {logoUrl && <img src={logoUrl} alt="Logo Preview" style={{ height: '64px', marginBottom: '12px', display: 'block', objectFit: 'contain' }} />}
+          <input type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleImageUpload} />
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Recommended size: 64x64 PNG.</p>
+        </div>
+      </div>
+
+      <div className="ms-card" style={{ padding: '24px', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '24px' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Support Channel Routing</h3>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Map each Automation Category to a specific Microsoft Teams Channel ID. If left blank, it will fall back to the default support channel.
+          </p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {categories.map(category => (
+              <div key={category} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <label style={{ width: '150px', fontSize: '14px', fontWeight: 600 }}>{category}</label>
+                <input 
+                  type="text" 
+                  value={categoryMappings[category] || ''} 
+                  onChange={e => handleCategoryMappingChange(category, e.target.value)} 
+                  style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                  placeholder="e.g. 19:xxxxx@thread.v2" 
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '8px' }}>
+          <button 
+            onClick={handleSave} 
+            disabled={saving} 
+            style={{ background: 'var(--accent-primary)', color: 'white', padding: '8px 16px', borderRadius: '2px', fontWeight: 600 }}>
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -146,6 +258,7 @@ function App() {
       case 'admins': return <AdminManagement />;
       case 'approvals': return <Approvals />;
       case 'audit': return <AuditLogs />;
+      case 'settings': return <SettingsPage />;
       default: return <Overview />;
     }
   };
@@ -202,6 +315,10 @@ function App() {
             <li className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               Audit Logs
+            </li>
+            <li className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Settings
             </li>
           </ul>
         </nav>

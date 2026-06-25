@@ -10,6 +10,7 @@ export interface HandoffSession {
   agentThreadId?: string; // The thread ID/conversation ID in the support channel
   agentConversationReference?: ConversationReference; // Reference to the support channel
   requestDetails?: string;
+  targetChannelId?: string; // Optional dynamically mapped channel ID
   createdAt: Date;
   claimedAt?: Date;
 }
@@ -26,7 +27,8 @@ export class HandoffService {
     userId: string,
     userName: string,
     userConversationReference: ConversationReference,
-    requestDetails: string
+    requestDetails: string,
+    targetChannelId?: string
   ): HandoffSession {
     const session: HandoffSession = {
       userId,
@@ -34,6 +36,7 @@ export class HandoffService {
       userConversationReference,
       state: 'waiting',
       requestDetails,
+      targetChannelId,
       createdAt: new Date()
     };
     this.sessions.set(userId, session);

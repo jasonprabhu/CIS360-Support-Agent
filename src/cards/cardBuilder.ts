@@ -1,4 +1,5 @@
 import { Attachment, CardFactory } from 'botbuilder';
+import { SettingsService } from '../services/settingsService';
 
 export class CardBuilder {
   /**
@@ -12,6 +13,28 @@ export class CardBuilder {
    * Welcome Card - shown when user starts conversation or requests it.
    */
   public static welcomeCard(userName: string): Attachment {
+    const settings = SettingsService.getSettings();
+    const brandName = settings.brandName || 'CIS360 Support';
+
+    const headerItems: any[] = [];
+    if (settings.logoUrl) {
+      headerItems.push({
+        type: 'Image',
+        url: settings.logoUrl,
+        size: 'Medium',
+        horizontalAlignment: 'Center'
+      });
+    }
+
+    headerItems.push({
+      type: 'TextBlock',
+      text: brandName,
+      weight: 'Bolder',
+      size: 'Large',
+      horizontalAlignment: 'Center',
+      color: 'Default'
+    });
+
     const card = {
       $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
       type: 'AdaptiveCard',
@@ -19,28 +42,12 @@ export class CardBuilder {
       body: [
         {
           type: 'Container',
-          style: 'accent',
-          bleed: true,
-          items: [
-            {
-              type: 'TextBlock',
-              text: 'CIS360 Support',
-              weight: 'Bolder',
-              size: 'Large',
-              color: 'Default'
-            },
-            {
-              type: 'TextBlock',
-              text: 'Automated & Live Assistance Portal',
-              size: 'Small',
-              isSubtle: true,
-              spacing: 'None'
-            }
-          ]
+          style: 'default',
+          items: headerItems
         },
         {
           type: 'TextBlock',
-          text: `Hello **${userName}**! Welcome to the CIS360 Support Portal. I am your virtual assistant. How can I help you today?`,
+          text: `Hello **${userName}**! Welcome to the ${brandName} Portal. I am your virtual assistant. How can I help you today?`,
           wrap: true,
           spacing: 'Medium'
         },
