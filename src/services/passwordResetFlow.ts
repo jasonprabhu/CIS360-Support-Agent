@@ -61,9 +61,10 @@ export class PasswordResetFlow {
         break;
 
       case 'AWAITING_OTP':
-        if (text.trim() === session.otp) {
+        if (text === session.otp) {
           await context.sendActivity(`✅ OTP Verified successfully! Executing Azure AD password reset for ${session.targetUser}...`);
-          await context.sendActivity(`Password has been reset. A temporary password has been securely sent to ${session.targetUser}.`);
+          const tempPassword = "TempPass" + Math.floor(1000 + Math.random() * 9000) + "!";
+          await context.sendActivity(`Password has been reset. The temporary password for ${session.targetUser} is: **${tempPassword}**\n\nPlease ensure this is changed immediately upon next login.`);
           this.sessions.delete(userId);
         } else {
           await context.sendActivity("❌ Invalid OTP. For security reasons, I am escalating this ticket to a human agent.");
@@ -76,7 +77,8 @@ export class PasswordResetFlow {
         // Mock security question validation
         if (text.trim().length > 2) {
           await context.sendActivity(`✅ Security details validated. Executing Azure AD password reset for ${session.targetUser}...`);
-          await context.sendActivity(`Password has been reset. A temporary password has been securely sent to ${session.targetUser}.`);
+          const tempPassword = "TempPass" + Math.floor(1000 + Math.random() * 9000) + "!";
+          await context.sendActivity(`Password has been reset. The temporary password for ${session.targetUser} is: **${tempPassword}**\n\nPlease ensure this is changed immediately upon next login.`);
           this.sessions.delete(userId);
         } else {
           await context.sendActivity("❌ Invalid security details provided. Escalating this ticket to a human agent.");
