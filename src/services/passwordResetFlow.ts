@@ -52,22 +52,33 @@ export class PasswordResetFlow {
         if (reply === 'yes' || reply === 'y' || reply === 'correct') {
           await context.sendActivity(`Checking authentication methods for ${session.targetUser}...`);
           
-          // Mock Graph API check for SSPR methods
-          const hasSSPR = Math.random() > 0.5; // Simulate 50% chance of having SSPR methods
-          
-          if (hasSSPR) {
-            session.otp = Math.floor(100000 + Math.random() * 900000).toString();
-            session.state = 'AWAITING_OTP';
+          try {
+            const { GraphService } = await import('./graphService');
+            const user = await GraphService.getUser(session.targetUser);
             
-            const smsProvider = SmsFactory.getProvider();
-            const mockPhoneNumber = "+1234567890"; 
-            await smsProvider.sendSms(mockPhoneNumber, `Your CIS360 Portal verification code is: ${session.otp}`);
+            // Check if user has a mobile phone configured in Entra ID
+            const hasSSPR = user && user.mobilePhone && user.mobilePhone.trim().length > 0;
             
-            await context.sendActivity(`I have sent an OTP code to the registered mobile device for ${session.targetUser} via SMS. Please enter the 6-digit code here.`);
-          } else {
-            session.state = 'AWAITING_MANAGER_APPROVAL';
-            await context.sendActivity(`No SSPR methods found for ${session.targetUser}. We must validate via security questions or Manager Approval.`);
-            await context.sendActivity(`Please answer the security question: What is your manager's last name?`);
+            if (hasSSPR) {
+              session.otp = Math.floor(100000 + Math.random() * 900000).toString();
+              session.state = 'AWAITING_OTP';
+              
+              const smsProvider = SmsFactory.getProvider();
+              // Use the user's actual mobile number from Graph API
+              const userPhoneNumber = user.mobilePhone; 
+              await smsProvider.sendSms(userPhoneNumber, `Your CIS360 Portal verification code is: ${session.otp}`);
+              
+              // Mask the phone number for security
+              const maskedPhone = userPhoneNumber.substring(0, 3) + '****' + userPhoneNumber.substring(userPhoneNumber.length - 4);
+              await context.sendActivity(`I have sent an OTP code to the registered mobile device (${maskedPhone}) for ${session.targetUser} via SMS. Please enter the 6-digit code here.`);
+            } else {
+              session.state = 'AWAITING_MANAGER_APPROVAL';
+              await context.sendActivity(`No SSPR mobile phone found for ${session.targetUser}. We must validate via security questions or Manager Approval.`);
+              await context.sendActivity(`Please answer the security question: What is your manager's last name?`);
+            }
+          } catch (err: any) {
+             await context.sendActivity(`❌ Failed to retrieve user details from Azure AD: ${err.message}`);
+             session.state = 'AWAITING_USER';
           }
         } else if (reply === 'no' || reply === 'n' || reply === 'nope') {
           session.state = 'AWAITING_USER';
