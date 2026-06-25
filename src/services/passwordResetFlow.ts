@@ -2,7 +2,7 @@ import { TurnContext, ActivityTypes } from 'botbuilder';
 import { HandoffService } from './handoff';
 import { SmsFactory } from './sms/SmsFactory';
 
-type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
+type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_UPN_CONFIRMATION' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
 
 interface ResetSession {
   userId: string;
@@ -30,35 +30,53 @@ export class PasswordResetFlow {
 
     // Process based on state
     switch (session.state) {
-      case 'AWAITING_USER':
-        if (text.toLowerCase() === 'mine' || text.toLowerCase() === 'me') {
-          session.targetUser = context.activity.from.name || context.activity.from.aadObjectId || 'Current User';
-        } else {
-          session.targetUser = text;
-        }
-        
-        await context.sendActivity(`Checking authentication methods for ${session.targetUser}...`);
-        
-        // Mock Graph API check for SSPR methods
-        const hasSSPR = Math.random() > 0.5; // Simulate 50% chance of having SSPR methods
-        
-        if (hasSSPR) {
-          session.otp = Math.floor(100000 + Math.random() * 900000).toString();
-          session.state = 'AWAITING_OTP';
-          
-          const smsProvider = SmsFactory.getProvider();
-          // Assuming user's mobile number is retrieved from Graph (mocked here as a dummy string for demo)
-          // In a real scenario, this would be `session.targetUser`'s phone number from MS Graph.
-          const mockPhoneNumber = "+1234567890"; 
-          await smsProvider.sendSms(mockPhoneNumber, `Your CIS360 Portal verification code is: ${session.otp}`);
-          
-          await context.sendActivity(`I have sent an OTP code to the registered mobile device for ${session.targetUser} via SMS. Please enter the 6-digit code here.`);
-        } else {
-          session.state = 'AWAITING_MANAGER_APPROVAL';
-          await context.sendActivity(`No SSPR methods found for ${session.targetUser}. We must validate via security questions or Manager Approval.`);
-          await context.sendActivity(`Please answer the security question: What is your manager's last name?`);
+      case 'AWAITING_USER': {
+        const inputStr = (text.toLowerCase() === 'mine' || text.toLowerCase() === 'me')
+          ? (context.activity.from.name || context.activity.from.aadObjectId || 'Current User')
+          : text;
+
+        try {
+          const { GraphService } = await import('./graphService');
+          const resolvedUpn = await GraphService.resolveUserUpn(inputStr);
+          session.targetUser = resolvedUpn;
+          session.state = 'AWAITING_UPN_CONFIRMATION';
+          await context.sendActivity(`I found the user: **${resolvedUpn}**.\n\nIs this the correct user to reset the password for? (Yes/No)`);
+        } catch (err: any) {
+          await context.sendActivity(`❌ Could not find a user matching "${inputStr}". Please try again with a valid name or email.`);
         }
         break;
+      }
+
+      case 'AWAITING_UPN_CONFIRMATION': {
+        const reply = text.trim().toLowerCase();
+        if (reply === 'yes' || reply === 'y' || reply === 'correct') {
+          await context.sendActivity(`Checking authentication methods for ${session.targetUser}...`);
+          
+          // Mock Graph API check for SSPR methods
+          const hasSSPR = Math.random() > 0.5; // Simulate 50% chance of having SSPR methods
+          
+          if (hasSSPR) {
+            session.otp = Math.floor(100000 + Math.random() * 900000).toString();
+            session.state = 'AWAITING_OTP';
+            
+            const smsProvider = SmsFactory.getProvider();
+            const mockPhoneNumber = "+1234567890"; 
+            await smsProvider.sendSms(mockPhoneNumber, `Your CIS360 Portal verification code is: ${session.otp}`);
+            
+            await context.sendActivity(`I have sent an OTP code to the registered mobile device for ${session.targetUser} via SMS. Please enter the 6-digit code here.`);
+          } else {
+            session.state = 'AWAITING_MANAGER_APPROVAL';
+            await context.sendActivity(`No SSPR methods found for ${session.targetUser}. We must validate via security questions or Manager Approval.`);
+            await context.sendActivity(`Please answer the security question: What is your manager's last name?`);
+          }
+        } else if (reply === 'no' || reply === 'n' || reply === 'nope') {
+          session.state = 'AWAITING_USER';
+          await context.sendActivity("Okay, please provide the correct email address or name of the user.");
+        } else {
+          await context.sendActivity("Please reply with Yes or No.");
+        }
+        break;
+      }
 
       case 'AWAITING_OTP':
         if (text === session.otp) {
