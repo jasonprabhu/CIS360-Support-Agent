@@ -5,6 +5,8 @@ export interface BotSettings {
   brandName: string;
   logoUrl: string;
   categoryMappings: Record<string, string>;
+  acsConnectionString?: string;
+  acsPhoneNumber?: string;
 }
 
 const SETTINGS_FILE_PATH = path.join(__dirname, '../../data/settings.json');

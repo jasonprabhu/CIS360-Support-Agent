@@ -1,5 +1,6 @@
 import { TurnContext, ActivityTypes } from 'botbuilder';
 import { HandoffService } from './handoff';
+import { SmsFactory } from './sms/SmsFactory';
 
 type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
 
@@ -44,8 +45,14 @@ export class PasswordResetFlow {
         if (hasSSPR) {
           session.otp = Math.floor(100000 + Math.random() * 900000).toString();
           session.state = 'AWAITING_OTP';
-          console.log(`[Azure Communication Services Mock] Sent OTP ${session.otp} to ${session.targetUser}`);
-          await context.sendActivity(`I have sent an OTP code to the registered mobile device for ${session.targetUser} via Azure Communication Services. Please enter the 6-digit code here.`);
+          
+          const smsProvider = SmsFactory.getProvider();
+          // Assuming user's mobile number is retrieved from Graph (mocked here as a dummy string for demo)
+          // In a real scenario, this would be `session.targetUser`'s phone number from MS Graph.
+          const mockPhoneNumber = "+1234567890"; 
+          await smsProvider.sendSms(mockPhoneNumber, `Your CIS360 Portal verification code is: ${session.otp}`);
+          
+          await context.sendActivity(`I have sent an OTP code to the registered mobile device for ${session.targetUser} via SMS. Please enter the 6-digit code here.`);
         } else {
           session.state = 'AWAITING_MANAGER_APPROVAL';
           await context.sendActivity(`No SSPR methods found for ${session.targetUser}. We must validate via security questions or Manager Approval.`);

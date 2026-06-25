@@ -16,9 +16,31 @@ router.get('/', (req, res) => {
 // POST /api/settings
 router.post('/', (req, res) => {
   try {
-    const { brandName, logoUrl, categoryMappings } = req.body;
-    const updated = SettingsService.updateSettings({ brandName, logoUrl, categoryMappings });
+    const { brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber } = req.body;
+    const updated = SettingsService.updateSettings({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber });
     res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/settings/test-sms
+router.post('/test-sms', async (req, res) => {
+  try {
+    const { testPhoneNumber } = req.body;
+    if (!testPhoneNumber) {
+      return res.status(400).json({ error: 'Test phone number is required' });
+    }
+
+    const { SmsFactory } = await import('../services/sms/SmsFactory');
+    const smsProvider = SmsFactory.getProvider();
+    const success = await smsProvider.sendSms(testPhoneNumber, 'This is a test message from CIS360 Admin Portal.');
+    
+    if (success) {
+      res.json({ success: true, message: 'Test SMS sent successfully!' });
+    } else {
+      res.status(500).json({ error: 'Failed to send Test SMS. Check server logs.' });
+    }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

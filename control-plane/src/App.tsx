@@ -140,6 +140,10 @@ const SettingsPage = () => {
   const [brandName, setBrandName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [categoryMappings, setCategoryMappings] = useState<Record<string, string>>({});
+  const [acsConnectionString, setAcsConnectionString] = useState('');
+  const [acsPhoneNumber, setAcsPhoneNumber] = useState('');
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [testingSms, setTestingSms] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Extract unique categories from support use cases
@@ -152,6 +156,8 @@ const SettingsPage = () => {
         setBrandName(data.brandName || '');
         setLogoUrl(data.logoUrl || '');
         setCategoryMappings(data.categoryMappings || {});
+        setAcsConnectionString(data.acsConnectionString || '');
+        setAcsPhoneNumber(data.acsPhoneNumber || '');
       })
       .catch(err => console.error('Failed to load settings', err));
   }, []);
@@ -171,13 +177,38 @@ const SettingsPage = () => {
     setCategoryMappings(prev => ({ ...prev, [category]: channelId }));
   };
 
+  const handleTestSms = async () => {
+    if (!testPhoneNumber) {
+      alert('Please enter a Test Phone Number.');
+      return;
+    }
+    setTestingSms(true);
+    try {
+      const res = await fetch('/api/settings/test-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testPhoneNumber })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('Test SMS sent successfully! Please check your phone.');
+      } else {
+        alert('Failed to send Test SMS: ' + (data.error || 'Unknown error. Check backend logs.'));
+      }
+    } catch (err) {
+      console.error('Test SMS request failed', err);
+      alert('Test SMS request failed.');
+    }
+    setTestingSms(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandName, logoUrl, categoryMappings })
+        body: JSON.stringify({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber })
       });
       alert('Settings saved successfully!');
     } catch (err) {
@@ -242,6 +273,58 @@ const SettingsPage = () => {
             style={{ background: 'var(--accent-primary)', color: 'white', padding: '8px 16px', borderRadius: '2px', fontWeight: 600 }}>
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
+        </div>
+      </div>
+
+      <div className="ms-card" style={{ padding: '24px', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '24px' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Azure Communication Services (SMS)</h3>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Configure ACS to enable real SMS delivery for OTPs and notifications. Leave blank to use Mock SMS (console logs).
+          </p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>ACS Connection String</label>
+              <input 
+                type="password" 
+                value={acsConnectionString} 
+                onChange={e => setAcsConnectionString(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="endpoint=https://..." 
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>ACS Phone Number</label>
+              <input 
+                type="text" 
+                value={acsPhoneNumber} 
+                onChange={e => setAcsPhoneNumber(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="e.g. +18005551234" 
+              />
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '8px', paddingTop: '16px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Test Configuration</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" 
+                  value={testPhoneNumber} 
+                  onChange={e => setTestPhoneNumber(e.target.value)} 
+                  style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                  placeholder="Enter your phone number (e.g. +19876543210)" 
+                />
+                <button 
+                  onClick={handleTestSms} 
+                  disabled={testingSms || (!acsConnectionString && !acsPhoneNumber)} 
+                  style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '2px', fontWeight: 600 }}>
+                  {testingSms ? 'Sending...' : 'Test SMS'}
+                </button>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>*Make sure to Save Settings before testing.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
