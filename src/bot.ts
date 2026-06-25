@@ -474,9 +474,13 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       console.error('[Handoff Error] Failed to post message to support channel:', err.message);
       // Notify the user of the error
       HandoffService.endSession(userId);
+      let errorDesc = err.message;
+      if (err.message.includes('Bad format of conversation ID') || err.message.includes('Missing channelId')) {
+        errorDesc = 'The IT Administrator has not configured a valid Teams Channel ID for this support category. Please ask them to update the Automation Hub Support Routing settings in the Control Plane.';
+      }
       const errCard = CardBuilder.textResponseCard(
         'Escalation Error',
-        `We were unable to contact the support channel: ${err.message}. Please try again later.`,
+        `We were unable to contact the support channel: ${errorDesc}`,
         'error'
       );
       await context.sendActivity({ attachments: [errCard] });

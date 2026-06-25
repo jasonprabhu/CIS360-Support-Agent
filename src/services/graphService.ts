@@ -176,8 +176,37 @@ export class GraphService {
   // USER LIFECYCLE MANAGEMENT (UC001 - UC012)
   // ==================================================
 
+  public static async resolveUserUpn(search: string): Promise<string> {
+    const cleanSearch = search.trim();
+    if (cleanSearch.includes('@')) return cleanSearch.toLowerCase();
+
+    if (config.m365Mock) {
+      for (const user of MockM365Database.users.values()) {
+        if (user.displayName.toLowerCase() === cleanSearch.toLowerCase() ||
+            user.userPrincipalName.toLowerCase() === cleanSearch.toLowerCase()) {
+          return user.userPrincipalName;
+        }
+      }
+      throw new Error(`User not found with name: ${cleanSearch}`);
+    }
+
+    const client = this.getClient();
+    const result = await client.api('/users')
+      .header('ConsistencyLevel', 'eventual')
+      .filter(`displayName eq '${cleanSearch}' or startswith(displayName, '${cleanSearch}') or startswith(userPrincipalName, '${cleanSearch}')`)
+      .select('userPrincipalName')
+      .top(1)
+      .count(true)
+      .get();
+
+    if (result.value && result.value.length > 0) {
+      return result.value[0].userPrincipalName;
+    }
+    throw new Error(`User not found with name: ${cleanSearch}`);
+  }
+
   public static async getUser(upn: string): Promise<M365User | null> {
-    const cleanUpn = upn.trim().toLowerCase();
+    const cleanUpn = (await this.resolveUserUpn(upn)).toLowerCase();
 
     if (config.m365Mock) {
       const user = MockM365Database.users.get(cleanUpn);
@@ -389,7 +418,7 @@ export class GraphService {
   }
 
   public static async resetPassword(upn: string, forceChange: boolean): Promise<string> {
-    const cleanUpn = upn.trim().toLowerCase();
+    const cleanUpn = (await this.resolveUserUpn(upn)).toLowerCase();
     const tempPassword = 'CIS360!' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
     if (config.m365Mock) {
