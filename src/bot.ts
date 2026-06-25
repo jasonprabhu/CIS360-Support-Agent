@@ -22,8 +22,22 @@ import { ApprovalService } from './services/approvalService';
 
 
 export class CIS360SupportBot extends TeamsActivityHandler {
+  private checkUseCaseEnabled: (context: TurnContext, ucCode: string) => Promise<boolean>;
+
   constructor() {
     super();
+
+    // Helper to validate if a use case is enabled
+    this.checkUseCaseEnabled = async (context: TurnContext, ucCode: string): Promise<boolean> => {
+      const settings = SettingsService.getSettings();
+      // If enabledUseCases is undefined, assume all are enabled by default
+      if (settings.enabledUseCases && settings.enabledUseCases[ucCode] === false) {
+        const contactMode = settings.supportContactMode || 'your IT administrator';
+        await context.sendActivity(`❌ **This automation is currently disabled.** Please contact support via ${contactMode}.`);
+        return false;
+      }
+      return true;
+    };
 
     // Handle incoming messages
     this.onMessage(async (context, next) => {
@@ -82,8 +96,10 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         await context.sendActivity({ attachments: [card] });
       } else if (ucMatch) {
         const ucCode = ucMatch[1].toUpperCase();
-        const card = M365CardBuilder.useCaseInputForm(ucCode);
-        await context.sendActivity({ attachments: [card] });
+        if (await this.checkUseCaseEnabled(context, ucCode)) {
+          const card = M365CardBuilder.useCaseInputForm(ucCode);
+          await context.sendActivity({ attachments: [card] });
+        }
       } else if (text === 'ticket' || text === 'snow') {
         const card = CardBuilder.ticketFormCard();
         await context.sendActivity({ attachments: [card] });
@@ -288,17 +304,23 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         break;
 
       case 'm365_form':
-        await context.sendActivity({ attachments: [M365CardBuilder.useCaseInputForm(activity.value.uc)] });
+        if (await this.checkUseCaseEnabled(context, activity.value.uc)) {
+          await context.sendActivity({ attachments: [M365CardBuilder.useCaseInputForm(activity.value.uc)] });
+        }
         break;
       case 'm365_run_direct': {
         const uc = activity.value.uc;
-        const card = M365CardBuilder.reviewAndConfirmCard(uc, {});
-        await context.sendActivity({ attachments: [card] });
+        if (await this.checkUseCaseEnabled(context, uc)) {
+          const card = M365CardBuilder.reviewAndConfirmCard(uc, {});
+          await context.sendActivity({ attachments: [card] });
+        }
         break;
       }
 
       case 'm365_execute':
-        await this.handleM365ExecutionRequest(context);
+        if (await this.checkUseCaseEnabled(context, activity.value.uc)) {
+          await this.handleM365ExecutionRequest(context);
+        }
         break;
 
       case 'm365_confirm_request':

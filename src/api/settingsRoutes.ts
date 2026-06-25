@@ -16,8 +16,16 @@ router.get('/', (req, res) => {
 // POST /api/settings
 router.post('/', (req, res) => {
   try {
-    const { brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber } = req.body;
-    const updated = SettingsService.updateSettings({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber });
+    const { brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, enabledUseCases, supportContactMode } = req.body;
+    const updated = SettingsService.updateSettings({ 
+      brandName, 
+      logoUrl, 
+      categoryMappings, 
+      acsConnectionString, 
+      acsPhoneNumber,
+      enabledUseCases,
+      supportContactMode
+    });
     res.json(updated);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

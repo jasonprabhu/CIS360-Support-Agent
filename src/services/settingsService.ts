@@ -7,6 +7,8 @@ export interface BotSettings {
   categoryMappings: Record<string, string>;
   acsConnectionString?: string;
   acsPhoneNumber?: string;
+  enabledUseCases: Record<string, boolean>;
+  supportContactMode?: string;
 }
 
 const SETTINGS_FILE_PATH = path.join(__dirname, '../../data/settings.json');
@@ -23,7 +25,8 @@ export class SettingsService {
   private static defaultSettings: BotSettings = {
     brandName: 'CIS360 Support',
     logoUrl: '', // Default empty, can fallback to text or a default SVG
-    categoryMappings: {}
+    categoryMappings: {},
+    enabledUseCases: {}
   };
 
   public static getSettings(): BotSettings {
