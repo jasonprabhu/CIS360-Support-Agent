@@ -303,13 +303,23 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         await context.sendActivity({ attachments: [M365CardBuilder.m365SubmenuCard(activity.value.category)] });
         break;
 
-      case 'm365_form':
-        if (await this.checkUseCaseEnabled(context, activity.value.uc)) {
-          await context.sendActivity({ attachments: [M365CardBuilder.useCaseInputForm(activity.value.uc)] });
+      case 'm365_form': {
+        const uc = activity.value.uc;
+        if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
+          await IdentitySecurityFlow.handle(context, uc);
+          break;
+        }
+        if (await this.checkUseCaseEnabled(context, uc)) {
+          await context.sendActivity({ attachments: [M365CardBuilder.useCaseInputForm(uc)] });
         }
         break;
+      }
       case 'm365_run_direct': {
         const uc = activity.value.uc;
+        if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
+          await IdentitySecurityFlow.handle(context, uc);
+          break;
+        }
         if (await this.checkUseCaseEnabled(context, uc)) {
           const card = M365CardBuilder.reviewAndConfirmCard(uc, {});
           await context.sendActivity({ attachments: [card] });
@@ -317,11 +327,17 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         break;
       }
 
-      case 'm365_execute':
-        if (await this.checkUseCaseEnabled(context, activity.value.uc)) {
+      case 'm365_execute': {
+        const uc = activity.value.uc;
+        if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
+          await IdentitySecurityFlow.handle(context, uc);
+          break;
+        }
+        if (await this.checkUseCaseEnabled(context, uc)) {
           await this.handleM365ExecutionRequest(context);
         }
         break;
+      }
 
       case 'm365_confirm_request':
         await this.handleM365ConfirmRequest(context);
@@ -672,6 +688,11 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
         await context.sendActivity({ attachments: [card] });
       } else if (aiResponse.type === 'execute') {
+        const uc = aiResponse.ucCode;
+        if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
+          await IdentitySecurityFlow.handle(context, uc);
+          return;
+        }
         // Display Review & Confirm card to the user/requestor before execution
         const card = M365CardBuilder.reviewAndConfirmCard(aiResponse.ucCode, aiResponse.parameters);
         await context.sendActivity({ attachments: [card] });
