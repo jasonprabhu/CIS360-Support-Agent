@@ -22,9 +22,9 @@ export class IdentitySecurityFlow {
 
     // If starting a new flow
     const textLower = text.toLowerCase();
-    const isReset = textLower.includes('password reset') || textLower.includes('reset password') || textLower === 'suc001';
-    const isUnlock = textLower.includes('unlock account') || textLower.includes('unlock my account') || textLower === 'suc002';
-    const isResetSspr = textLower.includes('reset sspr') || textLower.includes('clear mfa') || textLower === 'suc006';
+    const isReset = textLower.includes('password reset') || textLower.includes('reset password') || textLower.includes('suc001');
+    const isUnlock = textLower.includes('unlock account') || textLower.includes('unlock my account') || textLower.includes('account lockout') || textLower.includes('suc002');
+    const isResetSspr = textLower.includes('reset sspr') || textLower.includes('clear mfa') || textLower.includes('suc006');
 
     if (!session && (isReset || isUnlock || isResetSspr)) {
       let intent: Intent = 'RESET_PASSWORD';
