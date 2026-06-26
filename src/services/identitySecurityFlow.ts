@@ -3,15 +3,17 @@ import { HandoffService } from './handoff';
 import { SmsFactory } from './sms/SmsFactory';
 
 type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_UPN_CONFIRMATION' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
+type Intent = 'RESET_PASSWORD' | 'UNLOCK_ACCOUNT' | 'RESET_SSPR';
 
 interface ResetSession {
   userId: string;
   targetUser: string;
   state: ResetState;
+  intent: Intent;
   otp?: string;
 }
 
-export class PasswordResetFlow {
+export class IdentitySecurityFlow {
   private static sessions: Map<string, ResetSession> = new Map();
 
   public static async handle(context: TurnContext, text: string): Promise<{ handled: boolean, triggerHandoff?: boolean, category?: string }> {
@@ -19,10 +21,24 @@ export class PasswordResetFlow {
     let session = this.sessions.get(userId);
 
     // If starting a new flow
-    if (!session && (text.toLowerCase().includes('password reset') || text.toLowerCase().includes('reset password'))) {
-      session = { userId, targetUser: '', state: 'AWAITING_USER' };
+    const textLower = text.toLowerCase();
+    const isReset = textLower.includes('password reset') || textLower.includes('reset password') || textLower === 'suc001';
+    const isUnlock = textLower.includes('unlock account') || textLower.includes('unlock my account') || textLower === 'suc002';
+    const isResetSspr = textLower.includes('reset sspr') || textLower.includes('clear mfa') || textLower === 'suc006';
+
+    if (!session && (isReset || isUnlock || isResetSspr)) {
+      let intent: Intent = 'RESET_PASSWORD';
+      if (isUnlock) intent = 'UNLOCK_ACCOUNT';
+      if (isResetSspr) intent = 'RESET_SSPR';
+
+      session = { userId, targetUser: '', state: 'AWAITING_USER', intent };
       this.sessions.set(userId, session);
-      await context.sendActivity("I can help with resetting a password. Is this for your own account, or are you resetting a password for someone else? Please reply with 'Mine' or provide the email address of the user.");
+      
+      let actionText = 'resetting a password';
+      if (intent === 'UNLOCK_ACCOUNT') actionText = 'unlocking an account';
+      if (intent === 'RESET_SSPR') actionText = 'resetting SSPR registration';
+
+      await context.sendActivity(`I can help with ${actionText}. Is this for your own account, or are you doing this for someone else? Please reply with 'Mine' or provide the email address of the user.`);
       return { handled: true }; // Handled
     }
 
@@ -39,8 +55,14 @@ export class PasswordResetFlow {
           const { GraphService } = await import('./graphService');
           const resolvedUpn = await GraphService.resolveUserUpn(inputStr);
           session.targetUser = resolvedUpn;
-          session.state = 'AWAITING_UPN_CONFIRMATION';
-          await context.sendActivity(`I found the user: **${resolvedUpn}**.\n\nIs this the correct user to reset the password for? (Yes/No)`);
+          
+          if (session.intent === 'RESET_SSPR') {
+            await context.sendActivity(`⚠️ **WARNING**: Resetting SSPR Registration will remove all registered authentication methods (phone, email) for **${resolvedUpn}**. They will be prompted to re-register on their next login. Are you sure you want to proceed? (Yes/No)`);
+            session.state = 'AWAITING_UPN_CONFIRMATION';
+          } else {
+            session.state = 'AWAITING_UPN_CONFIRMATION';
+            await context.sendActivity(`I found the user: **${resolvedUpn}**.\n\nIs this the correct user to perform this action for? (Yes/No)`);
+          }
         } catch (err: any) {
           await context.sendActivity(`❌ Could not find a user matching "${inputStr}". Please try again with a valid name or email.`);
         }
@@ -91,13 +113,11 @@ export class PasswordResetFlow {
 
       case 'AWAITING_OTP':
         if (text === session.otp) {
-          await context.sendActivity(`✅ OTP Verified successfully! Executing Azure AD password reset for ${session.targetUser}...`);
+          await context.sendActivity(`✅ OTP Verified successfully! Executing action for ${session.targetUser}...`);
           try {
-            const { GraphService } = await import('./graphService');
-            const tempPassword = await GraphService.resetPassword(session.targetUser, true);
-            await context.sendActivity(`Password has been reset. The temporary password for ${session.targetUser} is: **${tempPassword}**\n\nPlease ensure this is changed immediately upon next login.`);
+            await this.executeIntent(context, session);
           } catch (err: any) {
-            await context.sendActivity(`❌ Failed to reset password in Azure AD: ${err.message}. Escalating to a human agent.`);
+            await context.sendActivity(`❌ Failed to execute action in Azure AD: ${err.message}. Escalating to a human agent.`);
             this.sessions.delete(userId);
             return { handled: true, triggerHandoff: true, category: 'Identity' };
           }
@@ -112,13 +132,11 @@ export class PasswordResetFlow {
       case 'AWAITING_MANAGER_APPROVAL':
         // Mock security question validation
         if (text.trim().length > 2) {
-          await context.sendActivity(`✅ Security details validated. Executing Azure AD password reset for ${session.targetUser}...`);
+          await context.sendActivity(`✅ Security details validated. Executing action for ${session.targetUser}...`);
           try {
-            const { GraphService } = await import('./graphService');
-            const tempPassword = await GraphService.resetPassword(session.targetUser, true);
-            await context.sendActivity(`Password has been reset. The temporary password for ${session.targetUser} is: **${tempPassword}**\n\nPlease ensure this is changed immediately upon next login.`);
+            await this.executeIntent(context, session);
           } catch (err: any) {
-            await context.sendActivity(`❌ Failed to reset password in Azure AD: ${err.message}. Escalating to a human agent.`);
+            await context.sendActivity(`❌ Failed to execute action in Azure AD: ${err.message}. Escalating to a human agent.`);
             this.sessions.delete(userId);
             return { handled: true, triggerHandoff: true, category: 'Identity' };
           }
@@ -132,5 +150,50 @@ export class PasswordResetFlow {
     }
 
     return { handled: true }; // Handled by flow
+  }
+
+  private static async executeIntent(context: TurnContext, session: ResetSession) {
+    const { GraphService } = await import('./graphService');
+    const { CardBuilder } = await import('../cards/cardBuilder');
+
+    if (session.intent === 'RESET_PASSWORD') {
+      const tempPassword = await GraphService.resetPassword(session.targetUser, true);
+      const card = CardBuilder.textResponseCard(
+        'Password Reset Successful',
+        `Password has been reset. The temporary password for ${session.targetUser} is: **${tempPassword}**\n\nPlease ensure this is changed immediately upon next login.`,
+        'success'
+      );
+      await context.sendActivity({ attachments: [card] });
+
+    } else if (session.intent === 'UNLOCK_ACCOUNT') {
+      const user = await GraphService.getUser(session.targetUser);
+      if (!user) throw new Error("User not found");
+
+      if (user.accountEnabled === false) {
+        throw new Error("Account is administratively blocked (accountEnabled=false). We cannot unlock this without L2 intervention.");
+      }
+
+      if (user.onPremisesSyncEnabled) {
+        throw new Error("Account is synchronized from On-Premises AD. Please unlock from the local Active Directory.");
+      }
+
+      // Cloud-only unlock
+      await GraphService.revokeSignInSessions(session.targetUser);
+      const card = CardBuilder.textResponseCard(
+        'Account Unlocked',
+        `Active sessions for ${session.targetUser} have been revoked and the account is cleared for fresh sign-in.\n\nIf they still cannot sign in, please request a Password Reset (SUC001).`,
+        'success'
+      );
+      await context.sendActivity({ attachments: [card] });
+
+    } else if (session.intent === 'RESET_SSPR') {
+      await GraphService.clearAuthenticationMethods(session.targetUser);
+      const card = CardBuilder.textResponseCard(
+        'SSPR Registration Reset',
+        `Authentication methods for ${session.targetUser} have been cleared. They will be prompted to set up SSPR again on their next login.`,
+        'success'
+      );
+      await context.sendActivity({ attachments: [card] });
+    }
   }
 }

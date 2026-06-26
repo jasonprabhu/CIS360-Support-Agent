@@ -20,6 +20,9 @@ export interface M365User {
   managerUpn?: string;
   accountEnabled: boolean;
   assignedLicenses: string[];
+  onPremisesSyncEnabled?: boolean;
+  lastPasswordChangeDateTime?: string;
+  otherMails?: string[];
   passwordProfile?: {
     forceChangePasswordNextSignIn: boolean;
   };
@@ -216,7 +219,7 @@ export class GraphService {
     const client = this.getClient();
     try {
       const graphUser = await client.api(`/users/${cleanUpn}`)
-        .select('id,userPrincipalName,displayName,givenName,surname,department,jobTitle,mobilePhone,officeLocation,accountEnabled,assignedLicenses')
+        .select('id,userPrincipalName,displayName,givenName,surname,department,jobTitle,mobilePhone,officeLocation,accountEnabled,assignedLicenses,onPremisesSyncEnabled,lastPasswordChangeDateTime,otherMails')
         .get();
 
       // Resolve manager
@@ -240,7 +243,10 @@ export class GraphService {
         officeLocation: graphUser.officeLocation || '',
         managerUpn,
         accountEnabled: graphUser.accountEnabled,
-        assignedLicenses: (graphUser.assignedLicenses || []).map((l: any) => l.skuId)
+        assignedLicenses: (graphUser.assignedLicenses || []).map((l: any) => l.skuId),
+        onPremisesSyncEnabled: graphUser.onPremisesSyncEnabled,
+        lastPasswordChangeDateTime: graphUser.lastPasswordChangeDateTime,
+        otherMails: graphUser.otherMails || []
       };
     } catch (err: any) {
       if (err.statusCode === 404) return null;
@@ -423,16 +429,16 @@ export class GraphService {
 
     if (config.m365Mock) {
       const user = MockM365Database.users.get(cleanUpn);
-      if (!user) throw new Error(`User not found: ${cleanUpn}`);
-
+      if (!user) throw new Error(`User ${cleanUpn} not found in mock database`);
       user.passwordProfile = { forceChangePasswordNextSignIn: forceChange };
-      MockM365Database.users.set(cleanUpn, user);
+      user.lastPasswordChangeDateTime = new Date().toISOString();
       return tempPassword;
     }
 
     const client = this.getClient();
     try {
-      await client.api(`/users/${cleanUpn}`).patch({
+      await client.api(`/users/${cleanUpn}`)
+        .patch({
         passwordProfile: {
           forceChangePasswordNextSignIn: forceChange,
           password: tempPassword
@@ -441,6 +447,42 @@ export class GraphService {
       return tempPassword;
     } catch (err: any) {
       throw new Error(`Graph API Password Reset Failed: ${err.message}`);
+    }
+  }
+
+  public static async revokeSignInSessions(upn: string): Promise<void> {
+    const cleanUpn = (await this.resolveUserUpn(upn)).toLowerCase();
+    if (config.m365Mock) return;
+
+    const client = this.getClient();
+    try {
+      await client.api(`/users/${cleanUpn}/revokeSignInSessions`).post({});
+    } catch (err: any) {
+      throw new Error(`Graph API Revoke Sessions Failed: ${err.message}`);
+    }
+  }
+
+  public static async clearAuthenticationMethods(upn: string): Promise<void> {
+    const cleanUpn = (await this.resolveUserUpn(upn)).toLowerCase();
+    
+    if (config.m365Mock) {
+      const user = MockM365Database.users.get(cleanUpn);
+      if (user) {
+        user.mobilePhone = '';
+        user.otherMails = [];
+      }
+      return;
+    }
+
+    const client = this.getClient();
+    try {
+      // Simplest way without full AuthMethods API permission is to wipe properties if we just have User.ReadWrite.All
+      await client.api(`/users/${cleanUpn}`).patch({
+        mobilePhone: null,
+        otherMails: []
+      });
+    } catch (err: any) {
+      throw new Error(`Graph API Clear SSPR Failed: ${err.message}`);
     }
   }
 

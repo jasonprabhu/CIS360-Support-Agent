@@ -8,7 +8,7 @@ import {
   ConversationAccount,
   TeamsInfo
 } from 'botbuilder';
-import { PasswordResetFlow } from './services/passwordResetFlow';
+import { IdentitySecurityFlow } from './services/identitySecurityFlow';
 import { SettingsService } from './services/settingsService';
 import { config } from './config';
 import { CardBuilder } from './cards/cardBuilder';
@@ -72,11 +72,11 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         return;
       }
 
-      // Check Password Reset Flow state machine
+      // Check Identity Security Flow state machine (SUC001, SUC002, SUC006)
       const rawText = (activity.text || '').trim();
       const text = rawText.toLowerCase();
 
-      const flowResult = await PasswordResetFlow.handle(context, rawText);
+      const flowResult = await IdentitySecurityFlow.handle(context, rawText);
       if (flowResult.handled) {
         if (flowResult.triggerHandoff) {
            await (this as any).initiateHandoff(context, flowResult.category);
@@ -86,7 +86,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       }
 
       // C. Fallback to text command parsing or NL Dialog
-      const ucMatch = text.match(/^\/?(uc\d{3})$/);
+      const ucMatch = text.match(/^\/?((?:s)?uc\d{3})$/i);
 
       if (text === 'help' || text === 'menu') {
         const card = CardBuilder.helpCard();
@@ -981,11 +981,85 @@ export class CIS360SupportBot extends TeamsActivityHandler {
     };
 
     try {
+      const requestorUpn = await this.resolveRequestorUpn(context);
       let summaryText = '';
       const resultDetails: { title: string; facts: { title: string; value: string }[] }[] = [];
       let rollbackAction: any = undefined;
 
       switch (ucCode) {
+        case 'SUC004': { // Check Password Expiry Status
+          const upn = inputs.userUpn || requestorUpn;
+          const user = await GraphService.getUser(upn);
+          if (!user) throw new Error("User not found.");
+          
+          let lastChange = user.lastPasswordChangeDateTime ? new Date(user.lastPasswordChangeDateTime) : null;
+          let expiryDateStr = 'Unknown';
+          let daysRemainingStr = 'Unknown';
+
+          if (lastChange) {
+            const expiryDate = new Date(lastChange.getTime() + (90 * 24 * 60 * 60 * 1000)); // Default 90 days
+            const daysRemaining = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+            expiryDateStr = expiryDate.toDateString();
+            daysRemainingStr = daysRemaining > 0 ? `${daysRemaining} days` : 'Expired';
+          }
+
+          summaryText = `Password expiry status for **${user.userPrincipalName}**.`;
+          resultDetails.push({
+            title: 'Expiry Status',
+            facts: [
+              { title: 'Last Changed:', value: lastChange ? lastChange.toDateString() : 'N/A' },
+              { title: 'Estimated Expiry Date:', value: expiryDateStr },
+              { title: 'Days Remaining:', value: daysRemainingStr }
+            ]
+          });
+          break;
+        }
+
+        case 'SUC005': { // Check Last Password Change Date
+          const upn = inputs.userUpn || requestorUpn;
+          const user = await GraphService.getUser(upn);
+          if (!user) throw new Error("User not found.");
+
+          let lastChange = user.lastPasswordChangeDateTime ? new Date(user.lastPasswordChangeDateTime) : null;
+          let elapsedStr = 'Unknown';
+
+          if (lastChange) {
+            const daysElapsed = Math.floor((new Date().getTime() - lastChange.getTime()) / (1000 * 3600 * 24));
+            elapsedStr = `${daysElapsed} days ago`;
+          }
+
+          summaryText = `Last password change for **${user.userPrincipalName}**.`;
+          resultDetails.push({
+            title: 'Password History',
+            facts: [
+              { title: 'Last Changed Date:', value: lastChange ? lastChange.toLocaleString() : 'N/A' },
+              { title: 'Time Elapsed:', value: elapsedStr }
+            ]
+          });
+          break;
+        }
+
+        case 'SUC007': { // Check SSPR Enrollment Status
+          const upn = inputs.userUpn || requestorUpn;
+          const user = await GraphService.getUser(upn);
+          if (!user) throw new Error("User not found.");
+
+          const hasPhone = !!user.mobilePhone;
+          const hasEmail = user.otherMails && user.otherMails.length > 0;
+          const isEnrolled = hasPhone || hasEmail;
+
+          summaryText = `SSPR Enrollment status for **${user.userPrincipalName}**.`;
+          resultDetails.push({
+            title: 'SSPR Status',
+            facts: [
+              { title: 'Enrollment Status:', value: isEnrolled ? '✅ Enrolled' : '❌ Not Enrolled' },
+              { title: 'Mobile Phone:', value: hasPhone ? user.mobilePhone : 'Not Configured' },
+              { title: 'Alternate Email:', value: hasEmail ? user.otherMails!.join(', ') : 'Not Configured' }
+            ]
+          });
+          break;
+        }
+
         default:
           throw new Error(`Unsupported M365 Administrative Use Case: ${ucCode}`);
       }
