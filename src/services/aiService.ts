@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { config } from '../config';
 import { StateManager, ChatMessage } from './stateManager';
+import { supportUseCases } from '../useCases';
 
 export interface AIExecutionResponse {
   type: 'execute';
@@ -90,14 +91,19 @@ export class AIService {
         }
       ];
 
+      const useCaseList = supportUseCases.map(uc => `- ${uc.id}: ${uc.name} (${uc.description})`).join('\n');
+
       const systemPrompt = `You are CIS Support Agent, a Level 1 IT Support assistant.
 Your job is to strictly help users and administrators perform IT administrative tasks and nothing else.
 You should collect parameters based on the use case before executing.
 
+Valid Use Cases:
+${useCaseList}
+
 Probing Flow:
 1. Examine the user's request. Identify if they want to run one of the tasks.
 2. Check if they have provided ALL required parameters. NOTE: For identity security tasks like Password Reset (SUC001), Unlock Account (SUC002), and Reset SSPR (SUC006), NO parameters are required. Execute them immediately.
-3. If ALL required parameters are present, call the tool 'execute_m365_task' passing the correct 'ucCode' and 'parameters'.
+3. If ALL required parameters are present, you MUST call the tool 'execute_m365_task' immediately passing the correct 'ucCode', 'actionDescription' and 'parameters'. DO NOT generate conversational text confirming you will execute it. ONLY output the tool call.
 4. If some required parameters are missing, ask for them. NEVER ask for admin credentials or passwords.
 5. If the request is not related to IT administration, you MUST politely refuse to answer. State clearly that your capabilities are strictly limited to IT support. Do NOT provide general knowledge, creative writing, or non-IT assistance under any circumstances.`;
 
