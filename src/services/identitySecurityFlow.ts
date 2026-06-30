@@ -2,6 +2,7 @@ import { TurnContext, ActivityTypes } from 'botbuilder';
 import { HandoffService } from './handoff';
 import { SmsFactory } from './sms/SmsFactory';
 import { AuditTrail } from '../cards/m365CardBuilder';
+import { SettingsService } from './settingsService';
 
 type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_UPN_CONFIRMATION' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
 type Intent = 'RESET_PASSWORD' | 'UNLOCK_ACCOUNT' | 'RESET_SSPR';
@@ -30,8 +31,16 @@ export class IdentitySecurityFlow {
 
     if (!session && (isReset || isUnlock || isResetSspr)) {
       let intent: Intent = 'RESET_PASSWORD';
-      if (isUnlock) intent = 'UNLOCK_ACCOUNT';
-      if (isResetSspr) intent = 'RESET_SSPR';
+      let ucCode = 'SUC001';
+      if (isUnlock) { intent = 'UNLOCK_ACCOUNT'; ucCode = 'SUC002'; }
+      if (isResetSspr) { intent = 'RESET_SSPR'; ucCode = 'SUC006'; }
+
+      const settings = SettingsService.getSettings();
+      if (settings.enabledUseCases && settings.enabledUseCases[ucCode] === false) {
+        const contactMode = settings.supportContactMode || 'support@company.com';
+        await context.sendActivity(`This automation is turned off - Please contact administrator (${contactMode})`);
+        return { handled: true };
+      }
 
       session = { userId, targetUser: '', state: 'AWAITING_USER', intent, requestorUpn };
       this.sessions.set(userId, session);

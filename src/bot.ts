@@ -33,8 +33,8 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       const settings = SettingsService.getSettings();
       // If enabledUseCases is undefined, assume all are enabled by default
       if (settings.enabledUseCases && settings.enabledUseCases[ucCode] === false) {
-        const contactMode = settings.supportContactMode || 'your IT administrator';
-        await context.sendActivity(`❌ **This automation is currently disabled.** Please contact support via ${contactMode}.`);
+        const contactMode = settings.supportContactMode || 'support@company.com';
+        await context.sendActivity(`This automation is turned off - Please contact administrator (${contactMode})`);
         return false;
       }
       return true;
@@ -700,9 +700,14 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
         await context.sendActivity({ attachments: [card] });
       } else if (aiResponse.type === 'execute') {
+        const ucCode = aiResponse.ucCode.toUpperCase();
+        if (!(await this.checkUseCaseEnabled(context, ucCode))) {
+          return;
+        }
+
         StateManager.setPendingExecution(userId, aiResponse);
-        const useCase = supportUseCases.find(uc => uc.id === aiResponse.ucCode.toUpperCase());
-        const ucName = useCase ? useCase.name : aiResponse.ucCode;
+        const useCase = supportUseCases.find(uc => uc.id === ucCode);
+        const ucName = useCase ? useCase.name : ucCode;
         await context.sendActivity(`I understand you want to **${aiResponse.actionDescription}**. This corresponds to **${ucName}**. Do you want me to execute this? (Yes/No)`);
       }
     } catch (err: any) {
