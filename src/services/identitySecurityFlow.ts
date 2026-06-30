@@ -112,8 +112,15 @@ export class IdentitySecurityFlow {
               session.state = 'AWAITING_OTP';
               
               const userEmail = user.otherMails![0];
-              console.log(`[EmailProvider Mock] Sending OTP ${session.otp} to ${userEmail}`);
               
+              const { EmailProvider } = await import('./email/EmailProvider');
+              const emailProvider = new EmailProvider();
+              const sent = await emailProvider.sendEmail(userEmail, 'CIS360 Portal Verification Code', `Your CIS360 Portal verification code is: ${session.otp}`);
+              
+              if (!sent) {
+                console.error('[Identity Flow] Failed to send email OTP via provider.');
+              }
+
               const [local, domain] = userEmail.split('@');
               const maskedLocal = local.length > 2 ? local.substring(0, 2) + '****' : '****';
               const maskedEmail = `${maskedLocal}@${domain}`;

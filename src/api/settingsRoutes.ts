@@ -16,7 +16,7 @@ router.get('/', (req, res) => {
 // POST /api/settings
 router.post('/', (req, res) => {
   try {
-    const { brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, enabledUseCases, supportEmail, supportPhone } = req.body;
+    const { brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, enabledUseCases, supportEmail, supportPhone, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom } = req.body;
     const updated = SettingsService.updateSettings({ 
       brandName, 
       logoUrl, 
@@ -25,7 +25,12 @@ router.post('/', (req, res) => {
       acsPhoneNumber,
       enabledUseCases,
       supportEmail,
-      supportPhone
+      supportPhone,
+      smtpHost,
+      smtpPort,
+      smtpUser,
+      smtpPass,
+      smtpFrom
     });
     res.json(updated);
   } catch (err: any) {
@@ -49,6 +54,28 @@ router.post('/test-sms', async (req, res) => {
       res.json({ success: true, message: 'Test SMS sent successfully!' });
     } else {
       res.status(500).json({ error: 'Failed to send Test SMS. Check server logs.' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/settings/test-email
+router.post('/test-email', async (req, res) => {
+  try {
+    const { testEmail } = req.body;
+    if (!testEmail) {
+      return res.status(400).json({ error: 'Test email address is required' });
+    }
+
+    const { EmailProvider } = await import('../services/email/EmailProvider');
+    const emailProvider = new EmailProvider();
+    const success = await emailProvider.sendEmail(testEmail, 'Test SMTP Configuration', 'This is a test message from CIS360 Admin Portal to verify SMTP configuration.');
+    
+    if (success) {
+      res.json({ success: true, message: 'Test Email sent successfully!' });
+    } else {
+      res.status(500).json({ error: 'Failed to send Test Email. Check server logs.' });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message });

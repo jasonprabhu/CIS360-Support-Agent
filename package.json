@@ -17,6 +17,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "isomorphic-fetch": "^3.0.0",
+    "nodemailer": "^9.0.2",
     "openai": "^4.33.0"
   },
   "devDependencies": {
@@ -24,6 +25,7 @@
     "@types/isomorphic-fetch": "^0.0.39",
     "@types/microsoft-graph": "^2.20.0",
     "@types/node": "^20.12.7",
+    "@types/nodemailer": "^8.0.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
   }

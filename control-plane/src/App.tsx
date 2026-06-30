@@ -163,6 +163,13 @@ const SettingsPage = () => {
   const [acsPhoneNumber, setAcsPhoneNumber] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportPhone, setSupportPhone] = useState('');
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState('');
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [smtpFrom, setSmtpFrom] = useState('');
+  const [testEmail, setTestEmail] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testingSms, setTestingSms] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -181,6 +188,11 @@ const SettingsPage = () => {
         setAcsPhoneNumber(data.acsPhoneNumber || '');
         setSupportEmail(data.supportEmail || '');
         setSupportPhone(data.supportPhone || '');
+        setSmtpHost(data.smtpHost || '');
+        setSmtpPort(data.smtpPort || '');
+        setSmtpUser(data.smtpUser || '');
+        setSmtpPass(data.smtpPass || '');
+        setSmtpFrom(data.smtpFrom || '');
       })
       .catch(err => console.error('Failed to load settings', err));
   }, []);
@@ -225,13 +237,38 @@ const SettingsPage = () => {
     setTestingSms(false);
   };
 
+  const handleTestEmail = async () => {
+    if (!testEmail) {
+      alert('Please enter a Test Email Address.');
+      return;
+    }
+    setTestingEmail(true);
+    try {
+      const res = await fetch('/api/settings/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testEmail })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('Test Email sent successfully! Please check your inbox.');
+      } else {
+        alert('Failed to send Test Email: ' + (data.error || 'Unknown error. Check backend logs.'));
+      }
+    } catch (err) {
+      console.error('Test Email request failed', err);
+      alert('Test Email request failed.');
+    }
+    setTestingEmail(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, supportEmail, supportPhone })
+        body: JSON.stringify({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, supportEmail, supportPhone, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom })
       });
       alert('Settings saved successfully!');
     } catch (err) {
@@ -284,6 +321,105 @@ const SettingsPage = () => {
             placeholder="e.g. +1-800-555-HELP" 
           />
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Used when a user requires manual fallback verification or requests a disabled automation.</p>
+        </div>
+
+        <div style={{ marginTop: '8px' }}>
+          <button 
+            onClick={handleSave} 
+            disabled={saving} 
+            style={{ background: 'var(--accent-primary)', color: 'white', padding: '8px 16px', borderRadius: '2px', fontWeight: 600 }}>
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </div>
+
+      <div className="ms-card" style={{ padding: '24px', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '24px' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Email Configuration (SMTP)</h3>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Configure your SMTP server to enable email OTP delivery for users without mobile numbers.
+          </p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>SMTP Host</label>
+              <input 
+                type="text" 
+                value={smtpHost} 
+                onChange={e => setSmtpHost(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="e.g. smtp.gmail.com" 
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>SMTP Port</label>
+              <input 
+                type="text" 
+                value={smtpPort} 
+                onChange={e => setSmtpPort(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="e.g. 587 or 465" 
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>SMTP Username</label>
+              <input 
+                type="text" 
+                value={smtpUser} 
+                onChange={e => setSmtpUser(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="e.g. admin@acme.com" 
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>SMTP Password / App Password</label>
+              <input 
+                type="password" 
+                value={smtpPass} 
+                onChange={e => setSmtpPass(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="••••••••••••" 
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>From Email Address</label>
+              <input 
+                type="text" 
+                value={smtpFrom} 
+                onChange={e => setSmtpFrom(e.target.value)} 
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                placeholder="e.g. no-reply@acme.com" 
+              />
+            </div>
+            
+            <div style={{ marginTop: '16px', padding: '16px', border: '1px dashed var(--border-color)', borderRadius: '4px' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Test Email Delivery</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" 
+                  value={testEmail} 
+                  onChange={e => setTestEmail(e.target.value)} 
+                  style={{ flex: 1, padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+                  placeholder="Enter email to test" 
+                />
+                <button 
+                  onClick={handleTestEmail} 
+                  disabled={testingEmail}
+                  style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '8px 16px', borderRadius: '2px', fontWeight: 600 }}>
+                  {testingEmail ? 'Sending...' : 'Send Test'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '8px' }}>
+          <button 
+            onClick={handleSave} 
+            disabled={saving} 
+            style={{ background: 'var(--accent-primary)', color: 'white', padding: '8px 16px', borderRadius: '2px', fontWeight: 600 }}>
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
         </div>
       </div>
 

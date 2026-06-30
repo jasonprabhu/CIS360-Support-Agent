@@ -10,6 +10,11 @@ export interface BotSettings {
   enabledUseCases: Record<string, boolean>;
   supportEmail?: string;
   supportPhone?: string;
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFrom?: string;
 }
 
 const SETTINGS_FILE_PATH = path.join(__dirname, '../../data/settings.json');
