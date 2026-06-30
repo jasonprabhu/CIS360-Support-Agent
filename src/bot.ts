@@ -33,8 +33,10 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       const settings = SettingsService.getSettings();
       // If enabledUseCases is undefined, assume all are enabled by default
       if (settings.enabledUseCases && settings.enabledUseCases[ucCode] === false) {
-        const contactMode = settings.supportContactMode || 'support@company.com';
-        await context.sendActivity(`This automation is turned off - Please contact administrator (${contactMode})`);
+        const email = settings.supportEmail || 'support@company.com';
+        const phone = settings.supportPhone || '';
+        const contactStr = phone ? `${email} or ${phone}` : email;
+        await context.sendActivity(`This automation is turned off - Please contact administrator (${contactStr})`);
         return false;
       }
       return true;

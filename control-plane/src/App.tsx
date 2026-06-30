@@ -161,7 +161,8 @@ const SettingsPage = () => {
   const [categoryMappings, setCategoryMappings] = useState<Record<string, string>>({});
   const [acsConnectionString, setAcsConnectionString] = useState('');
   const [acsPhoneNumber, setAcsPhoneNumber] = useState('');
-  const [supportContactMode, setSupportContactMode] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportPhone, setSupportPhone] = useState('');
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testingSms, setTestingSms] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -178,7 +179,8 @@ const SettingsPage = () => {
         setCategoryMappings(data.categoryMappings || {});
         setAcsConnectionString(data.acsConnectionString || '');
         setAcsPhoneNumber(data.acsPhoneNumber || '');
-        setSupportContactMode(data.supportContactMode || '');
+        setSupportEmail(data.supportEmail || '');
+        setSupportPhone(data.supportPhone || '');
       })
       .catch(err => console.error('Failed to load settings', err));
   }, []);
@@ -229,7 +231,7 @@ const SettingsPage = () => {
       await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, supportContactMode })
+        body: JSON.stringify({ brandName, logoUrl, categoryMappings, acsConnectionString, acsPhoneNumber, supportEmail, supportPhone })
       });
       alert('Settings saved successfully!');
     } catch (err) {
@@ -263,15 +265,25 @@ const SettingsPage = () => {
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Recommended size: 64x64 PNG.</p>
         </div>
         <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Support Contact Mode</label>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Support Email</label>
           <input 
             type="text" 
-            value={supportContactMode} 
-            onChange={e => setSupportContactMode(e.target.value)} 
+            value={supportEmail} 
+            onChange={e => setSupportEmail(e.target.value)} 
             style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
-            placeholder="e.g. support@acme.com or 1-800-HELP" 
+            placeholder="e.g. support@acme.com" 
           />
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Used when a user requests a disabled automation.</p>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Support Phone Number</label>
+          <input 
+            type="text" 
+            value={supportPhone} 
+            onChange={e => setSupportPhone(e.target.value)} 
+            style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }} 
+            placeholder="e.g. +1-800-555-HELP" 
+          />
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>Used when a user requires manual fallback verification or requests a disabled automation.</p>
         </div>
       </div>
 

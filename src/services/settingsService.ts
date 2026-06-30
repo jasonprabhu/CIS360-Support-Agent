@@ -8,7 +8,8 @@ export interface BotSettings {
   acsConnectionString?: string;
   acsPhoneNumber?: string;
   enabledUseCases: Record<string, boolean>;
-  supportContactMode?: string;
+  supportEmail?: string;
+  supportPhone?: string;
 }
 
 const SETTINGS_FILE_PATH = path.join(__dirname, '../../data/settings.json');

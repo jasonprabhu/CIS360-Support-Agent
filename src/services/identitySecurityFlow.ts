@@ -4,7 +4,7 @@ import { SmsFactory } from './sms/SmsFactory';
 import { AuditTrail } from '../cards/m365CardBuilder';
 import { SettingsService } from './settingsService';
 
-type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_UPN_CONFIRMATION' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
+type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_UPN_CONFIRMATION' | 'AWAITING_OTP';
 type Intent = 'RESET_PASSWORD' | 'UNLOCK_ACCOUNT' | 'RESET_SSPR';
 
 interface ResetSession {
@@ -37,8 +37,10 @@ export class IdentitySecurityFlow {
 
       const settings = SettingsService.getSettings();
       if (settings.enabledUseCases && settings.enabledUseCases[ucCode] === false) {
-        const contactMode = settings.supportContactMode || 'support@company.com';
-        await context.sendActivity(`This automation is turned off - Please contact administrator (${contactMode})`);
+        const email = settings.supportEmail || 'support@company.com';
+        const phone = settings.supportPhone || '';
+        const contactStr = phone ? `${email} or ${phone}` : email;
+        await context.sendActivity(`This automation is turned off - Please contact administrator (${contactStr})`);
         return { handled: true };
       }
 
@@ -90,9 +92,10 @@ export class IdentitySecurityFlow {
             const user = await GraphService.getUser(session.targetUser);
             
             // Check if user has a mobile phone configured in Entra ID
-            const hasSSPR = user && user.mobilePhone && user.mobilePhone.trim().length > 0;
+            const hasMobile = user && user.mobilePhone && user.mobilePhone.trim().length > 0;
+            const hasOtherMail = user && user.otherMails && user.otherMails.length > 0 && user.otherMails[0].trim().length > 0;
             
-            if (hasSSPR) {
+            if (hasMobile) {
               session.otp = Math.floor(100000 + Math.random() * 900000).toString();
               session.state = 'AWAITING_OTP';
               
@@ -104,10 +107,26 @@ export class IdentitySecurityFlow {
               // Mask the phone number for security
               const maskedPhone = userPhoneNumber.substring(0, 3) + '****' + userPhoneNumber.substring(userPhoneNumber.length - 4);
               await context.sendActivity(`I have sent an OTP code to the registered mobile device (${maskedPhone}) for ${session.targetUser} via SMS. Please enter the 6-digit code here.`);
+            } else if (hasOtherMail) {
+              session.otp = Math.floor(100000 + Math.random() * 900000).toString();
+              session.state = 'AWAITING_OTP';
+              
+              const userEmail = user.otherMails![0];
+              console.log(`[EmailProvider Mock] Sending OTP ${session.otp} to ${userEmail}`);
+              
+              const [local, domain] = userEmail.split('@');
+              const maskedLocal = local.length > 2 ? local.substring(0, 2) + '****' : '****';
+              const maskedEmail = `${maskedLocal}@${domain}`;
+              
+              await context.sendActivity(`I have sent an OTP code to the registered alternate email (${maskedEmail}) for ${session.targetUser}. Please enter the 6-digit code here.`);
             } else {
-              session.state = 'AWAITING_MANAGER_APPROVAL';
-              await context.sendActivity(`No SSPR mobile phone found for ${session.targetUser}. We must validate via security questions or Manager Approval.`);
-              await context.sendActivity(`Please answer the security question: What is your manager's last name?`);
+              const settings = SettingsService.getSettings();
+              const email = settings.supportEmail || 'support@company.com';
+              const phone = settings.supportPhone || '';
+              const contactStr = phone ? `${email} or ${phone}` : email;
+              
+              await context.sendActivity(`We couldn't find a registered mobile number or alternate email for verification. Please contact support at ${contactStr} for manual assistance.`);
+              this.sessions.delete(userId);
             }
           } catch (err: any) {
              await context.sendActivity(`❌ Failed to retrieve user details from Azure AD: ${err.message}`);
@@ -135,25 +154,6 @@ export class IdentitySecurityFlow {
           this.sessions.delete(userId);
         } else {
           await context.sendActivity("❌ Invalid OTP. For security reasons, I am escalating this ticket to a human agent.");
-          this.sessions.delete(userId);
-          return { handled: true, triggerHandoff: true, category: 'Identity' };
-        }
-        break;
-
-      case 'AWAITING_MANAGER_APPROVAL':
-        // Mock security question validation
-        if (text.trim().length > 2) {
-          await context.sendActivity(`✅ Security details validated. Executing action for ${session.targetUser}...`);
-          try {
-            await this.executeIntent(context, session);
-          } catch (err: any) {
-            await context.sendActivity(`❌ Failed to execute action in Azure AD: ${err.message}. Escalating to a human agent.`);
-            this.sessions.delete(userId);
-            return { handled: true, triggerHandoff: true, category: 'Identity' };
-          }
-          this.sessions.delete(userId);
-        } else {
-          await context.sendActivity("❌ Invalid security details provided. Escalating this ticket to a human agent.");
           this.sessions.delete(userId);
           return { handled: true, triggerHandoff: true, category: 'Identity' };
         }
