@@ -53,166 +53,20 @@ export class M365CardBuilder {
         },
         {
           type: 'TextBlock',
-          text: 'Select an administrative task category below to open the corresponding options form:',
+          text: 'The visual form menu has been deprecated. CIS Support Agent is now entirely conversational!',
+          weight: 'Bolder',
+          wrap: true,
+          spacing: 'Medium'
+        },
+        {
+          type: 'TextBlock',
+          text: 'Simply tell me what you need in natural language. For example:\n- "Reset my password"\n- "Unlock my account"\n- "Show me my sign-in history"\n- "Check my MFA status"',
           wrap: true,
           spacing: 'Medium'
         }
-      ],
-      actions: [
-        {
-          type: 'Action.Submit',
-          title: '👤 User Lifecycle (UC001-UC012)',
-          data: { action: 'm365_submenu', category: 'user_lifecycle' }
-        },
-        {
-          type: 'Action.Submit',
-          title: '💳 License Management (UC013-UC020)',
-          data: { action: 'm365_submenu', category: 'licensing' }
-        },
-        {
-          type: 'Action.Submit',
-          title: '👥 Group Management (UC021-UC028)',
-          data: { action: 'm365_submenu', category: 'groups' }
-        },
-        {
-          type: 'Action.Submit',
-          title: '📬 Mailbox & Exchange (UC029-UC043)',
-          data: { action: 'm365_submenu', category: 'mailboxes' }
-        },
-        {
-          type: 'Action.Submit',
-          title: '📁 OneDrive & SharePoint (UC044-UC050)',
-          data: { action: 'm365_submenu', category: 'collaboration' }
-        }
       ]
     };
     return this.toAttachment(card);
-  }
-
-  /**
-   * Submenu listing specific use cases
-   */
-  public static m365SubmenuCard(category: 'user_lifecycle' | 'licensing' | 'groups' | 'mailboxes' | 'collaboration'): Attachment {
-    let title = '';
-    const actions: any[] = [];
-
-    if (category === 'user_lifecycle') {
-      title = '👤 User Lifecycle Management';
-      actions.push(
-        { type: 'Action.Submit', title: 'UC001 - Create User', data: { action: 'm365_form', uc: 'UC001' } },
-        { type: 'Action.Submit', title: 'UC002 - Update Display Name', data: { action: 'm365_form', uc: 'UC002' } },
-        { type: 'Action.Submit', title: 'UC003 - Update Job Title', data: { action: 'm365_form', uc: 'UC003' } },
-        { type: 'Action.Submit', title: 'UC004 - Update Department', data: { action: 'm365_form', uc: 'UC004' } },
-        { type: 'Action.Submit', title: 'UC005 - Update Manager', data: { action: 'm365_form', uc: 'UC005' } },
-        { type: 'Action.Submit', title: 'UC008 - Reset Password', data: { action: 'm365_form', uc: 'UC008' } },
-        { type: 'Action.Submit', title: 'UC010 - Block Sign-in', data: { action: 'm365_form', uc: 'UC010' } },
-        { type: 'Action.Submit', title: 'UC011 - Unblock Sign-in', data: { action: 'm365_form', uc: 'UC011' } },
-        { type: 'Action.Submit', title: 'UC012 - Delete User', data: { action: 'm365_form', uc: 'UC012' } }
-      );
-    } else if (category === 'licensing') {
-      title = '💳 License Management';
-      actions.push(
-        { type: 'Action.Submit', title: 'UC013 - Assign License', data: { action: 'm365_form', uc: 'UC013' } },
-        { type: 'Action.Submit', title: 'UC014 - Remove License', data: { action: 'm365_form', uc: 'UC014' } },
-        { type: 'Action.Submit', title: 'UC015 - Check User Licenses', data: { action: 'm365_form', uc: 'UC015' } },
-        { type: 'Action.Submit', title: 'UC016 - Check Available Licenses', data: { action: 'm365_run_direct', uc: 'UC016' } },
-        { type: 'Action.Submit', title: 'UC020 - Find Unlicensed Users', data: { action: 'm365_run_direct', uc: 'UC020' } }
-      );
-    } else if (category === 'groups') {
-      title = '👥 Group Management';
-      actions.push(
-        { type: 'Action.Submit', title: 'UC021 - Create Security Group', data: { action: 'm365_form', uc: 'UC021' } },
-        { type: 'Action.Submit', title: 'UC022 - Create M365 Group', data: { action: 'm365_form', uc: 'UC022' } },
-        { type: 'Action.Submit', title: 'UC023 - Add Group Member', data: { action: 'm365_form', uc: 'UC023' } },
-        { type: 'Action.Submit', title: 'UC024 - Remove Group Member', data: { action: 'm365_form', uc: 'UC024' } },
-        { type: 'Action.Submit', title: 'UC025 - View Group Members', data: { action: 'm365_form', uc: 'UC025' } },
-        { type: 'Action.Submit', title: 'UC026 - Update Group Owner', data: { action: 'm365_form', uc: 'UC026' } },
-        { type: 'Action.Submit', title: 'UC027 - Hide Group from GAL', data: { action: 'm365_form', uc: 'UC027' } },
-        { type: 'Action.Submit', title: 'UC028 - Rename Group', data: { action: 'm365_form', uc: 'UC028' } }
-      );
-    } else if (category === 'mailboxes') {
-      title = '📬 Mailbox & Exchange Online';
-      actions.push(
-        { type: 'Action.Submit', title: 'UC029 - Create Shared Mailbox', data: { action: 'm365_form', uc: 'UC029' } },
-        { type: 'Action.Submit', title: 'UC030 - Delete Shared Mailbox', data: { action: 'm365_form', uc: 'UC030' } },
-        { type: 'Action.Submit', title: 'UC031 - Add Mailbox Delegate', data: { action: 'm365_form', uc: 'UC031' } },
-        { type: 'Action.Submit', title: 'UC032 - Remove Mailbox Delegate', data: { action: 'm365_form', uc: 'UC032' } },
-        { type: 'Action.Submit', title: 'UC036 - Check Mailbox Permissions', data: { action: 'm365_form', uc: 'UC036' } },
-        { type: 'Action.Submit', title: 'UC037 - Enable Mail Forwarding', data: { action: 'm365_form', uc: 'UC037' } },
-        { type: 'Action.Submit', title: 'UC038 - Disable Mail Forwarding', data: { action: 'm365_form', uc: 'UC038' } },
-        { type: 'Action.Submit', title: 'UC039 - Set Automatic Reply', data: { action: 'm365_form', uc: 'UC039' } },
-        { type: 'Action.Submit', title: 'UC040 - Disable Automatic Reply', data: { action: 'm365_form', uc: 'UC040' } },
-        { type: 'Action.Submit', title: 'UC041 - Increase Mailbox Quota', data: { action: 'm365_form', uc: 'UC041' } },
-        { type: 'Action.Submit', title: 'UC042 - Check Mailbox Size', data: { action: 'm365_form', uc: 'UC042' } },
-        { type: 'Action.Submit', title: 'UC043 - Convert User Mailbox to Shared', data: { action: 'm365_form', uc: 'UC043' } }
-      );
-    } else {
-      title = '📁 OneDrive & SharePoint Portal';
-      actions.push(
-        { type: 'Action.Submit', title: 'UC044 - Check OneDrive Storage', data: { action: 'm365_form', uc: 'UC044' } },
-        { type: 'Action.Submit', title: 'UC045 - Grant OneDrive Access', data: { action: 'm365_form', uc: 'UC045' } },
-        { type: 'Action.Submit', title: 'UC046 - Restore OneDrive Files', data: { action: 'm365_form', uc: 'UC046' } },
-        { type: 'Action.Submit', title: 'UC047 - Generate Sharing Report', data: { action: 'm365_form', uc: 'UC047' } },
-        { type: 'Action.Submit', title: 'UC048 - Create SharePoint Site', data: { action: 'm365_form', uc: 'UC048' } },
-        { type: 'Action.Submit', title: 'UC049 - Add User to SharePoint Site', data: { action: 'm365_form', uc: 'UC049' } },
-        { type: 'Action.Submit', title: 'UC050 - Check SharePoint Permissions', data: { action: 'm365_form', uc: 'UC050' } }
-      );
-    }
-
-    const card = {
-      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
-      type: 'AdaptiveCard',
-      version: '1.5',
-      body: [
-        {
-          type: 'TextBlock',
-          text: title,
-          weight: 'Bolder',
-          size: 'Medium',
-          color: 'Accent'
-        },
-        {
-          type: 'TextBlock',
-          text: 'Select a use case execution form:',
-          isSubtle: true,
-          spacing: 'Small'
-        }
-      ],
-      actions: [
-        ...actions,
-        {
-          type: 'Action.Submit',
-          title: '🏡 Back to Categories',
-          data: { action: 'm365_menu' }
-        }
-      ]
-    };
-
-    return this.toAttachment(card);
-  }
-
-  /**
-   * Generates input forms for all use cases (UC001 - UC050)
-   */
-  public static useCaseInputForm(ucCode: string): Attachment {
-    return {
-      contentType: 'application/vnd.microsoft.card.adaptive',
-      content: {
-        type: 'AdaptiveCard',
-        version: '1.4',
-        body: [
-          { type: 'TextBlock', text: `Please provide details for ${ucCode}`, weight: 'bolder', size: 'medium' },
-          { type: 'Input.Text', id: 'userUpn', placeholder: 'Target User UPN' }
-        ],
-        actions: [
-          {
-            type: 'Action.Submit',
-            title: 'Submit',
-            data: { action: 'm365_run_direct', uc: ucCode }
-          }
-        ]
-      }
-    };
   }
 
   public static useCaseConfirmationCard(

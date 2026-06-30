@@ -117,10 +117,9 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         await context.sendActivity({ attachments: [card] });
       } else if (ucMatch) {
         const ucCode = ucMatch[1].toUpperCase();
-        if (await this.checkUseCaseEnabled(context, ucCode)) {
-          const card = M365CardBuilder.useCaseInputForm(ucCode);
-          await context.sendActivity({ attachments: [card] });
-        }
+        await context.sendActivity({
+          attachments: [CardBuilder.textResponseCard('Direct Execution Disabled', `Task ${ucCode} cannot be run directly via ID anymore. Please describe what you want to do in natural language.`, 'warning')]
+        });
       } else if (text === 'ticket' || text === 'snow') {
         const card = CardBuilder.ticketFormCard();
         await context.sendActivity({ attachments: [card] });
@@ -321,18 +320,10 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         break;
 
       case 'm365_submenu':
-        await context.sendActivity({ attachments: [M365CardBuilder.m365SubmenuCard(activity.value.category)] });
-        break;
-
       case 'm365_form': {
-        const uc = activity.value.uc;
-        if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
-          await IdentitySecurityFlow.handle(context, uc, await this.resolveRequestorUpn(context));
-          break;
-        }
-        if (await this.checkUseCaseEnabled(context, uc)) {
-          await context.sendActivity({ attachments: [M365CardBuilder.useCaseInputForm(uc)] });
-        }
+        await context.sendActivity({
+          attachments: [CardBuilder.textResponseCard('Menu Deprecated', 'The visual forms have been deprecated. Please type your request in natural language.', 'info')]
+        });
         break;
       }
       case 'm365_run_direct': {
