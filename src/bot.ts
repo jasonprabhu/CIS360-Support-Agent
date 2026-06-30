@@ -80,6 +80,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
 
       const flowResult = await IdentitySecurityFlow.handle(context, rawText, requestorUpn);
       if (flowResult.handled) {
+        StateManager.clearHistory(userId);
         if (flowResult.triggerHandoff) {
            await (this as any).initiateHandoff(context, flowResult.category);
         }
@@ -92,6 +93,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       if (pendingExec) {
         if (text === 'yes' || text === 'y' || text === 'sure' || text === 'do it') {
           StateManager.clearPendingExecution(userId);
+          StateManager.clearHistory(userId);
           const requestorUpn = await this.resolveRequestorUpn(context);
           if (['SUC001', 'SUC002', 'SUC006'].includes(pendingExec.ucCode.toUpperCase())) {
             await IdentitySecurityFlow.handle(context, pendingExec.ucCode, requestorUpn);
@@ -100,6 +102,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           }
         } else {
           StateManager.clearPendingExecution(userId);
+          StateManager.clearHistory(userId);
           await context.sendActivity('Okay, I have cancelled that request.');
         }
         await next();
