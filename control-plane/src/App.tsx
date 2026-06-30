@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supportUseCases } from './useCases';
+import LicenseIntelligence from './pages/LicenseIntelligence';
 import './index.css';
 
 // Placeholder Pages
@@ -517,6 +518,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': return <Overview />;
+      case 'license-intelligence': return <LicenseIntelligence />;
       case 'automation': return <AutomationHub />;
       case 'admins': return <AdminManagement />;
       case 'approvals': return <Approvals />;
@@ -563,6 +565,12 @@ function App() {
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
               Home
             </li>
+            
+            <li className={`nav-item ${activeTab === 'license-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('license-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              License Intelligence
+            </li>
+
             <li className={`nav-item ${activeTab === 'automation' ? 'active' : ''}`} onClick={() => setActiveTab('automation')}>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               Automation Hub
