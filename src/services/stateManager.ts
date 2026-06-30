@@ -7,6 +7,7 @@ export class StateManager {
   // In-memory conversation history store
   // Map of userId -> ChatMessage[]
   private static historyStore: Map<string, ChatMessage[]> = new Map();
+  private static pendingExecutions: Map<string, any> = new Map();
 
   // Maximum context size to prevent context overflow or high token costs
   private static MAX_HISTORY = 10;
@@ -44,5 +45,17 @@ export class StateManager {
   public static clearHistory(userId: string): void {
     this.historyStore.delete(userId);
     console.log(`[StateManager] Cleared conversation history for user: ${userId}`);
+  }
+
+  public static setPendingExecution(userId: string, execution: any): void {
+    this.pendingExecutions.set(userId, execution);
+  }
+
+  public static getPendingExecution(userId: string): any {
+    return this.pendingExecutions.get(userId);
+  }
+
+  public static clearPendingExecution(userId: string): void {
+    this.pendingExecutions.delete(userId);
   }
 }

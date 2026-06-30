@@ -5,6 +5,7 @@ import { StateManager, ChatMessage } from './stateManager';
 export interface AIExecutionResponse {
   type: 'execute';
   ucCode: string;
+  actionDescription: string;
   parameters: any;
 }
 
@@ -80,9 +81,10 @@ export class AIService {
               type: 'object',
               properties: {
                 ucCode: { type: 'string', description: 'The use case code (e.g. SUC001) identifying the task.' },
+                actionDescription: { type: 'string', description: 'A short, user-friendly description of what you are about to do. Example: "check your password expiry status"' },
                 parameters: { type: 'object', description: 'Dynamic arguments collected for the specific use case.', additionalProperties: true }
               },
-              required: ['ucCode', 'parameters']
+              required: ['ucCode', 'actionDescription', 'parameters']
             }
           }
         }
@@ -120,6 +122,7 @@ Probing Flow:
           return {
             type: 'execute',
             ucCode: parsed.ucCode,
+            actionDescription: parsed.actionDescription || 'execute task',
             parameters: parsed.parameters
           };
         }

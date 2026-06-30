@@ -1,6 +1,7 @@
 import { TurnContext, ActivityTypes } from 'botbuilder';
 import { HandoffService } from './handoff';
 import { SmsFactory } from './sms/SmsFactory';
+import { AuditTrail } from '../cards/m365CardBuilder';
 
 type ResetState = 'INIT' | 'AWAITING_USER' | 'AWAITING_UPN_CONFIRMATION' | 'AWAITING_OTP' | 'AWAITING_MANAGER_APPROVAL';
 type Intent = 'RESET_PASSWORD' | 'UNLOCK_ACCOUNT' | 'RESET_SSPR';
@@ -11,12 +12,13 @@ interface ResetSession {
   state: ResetState;
   intent: Intent;
   otp?: string;
+  requestorUpn: string;
 }
 
 export class IdentitySecurityFlow {
   private static sessions: Map<string, ResetSession> = new Map();
 
-  public static async handle(context: TurnContext, text: string): Promise<{ handled: boolean, triggerHandoff?: boolean, category?: string }> {
+  public static async handle(context: TurnContext, text: string, requestorUpn: string): Promise<{ handled: boolean, triggerHandoff?: boolean, category?: string }> {
     const userId = context.activity.from.id;
     let session = this.sessions.get(userId);
 
@@ -31,7 +33,7 @@ export class IdentitySecurityFlow {
       if (isUnlock) intent = 'UNLOCK_ACCOUNT';
       if (isResetSspr) intent = 'RESET_SSPR';
 
-      session = { userId, targetUser: '', state: 'AWAITING_USER', intent };
+      session = { userId, targetUser: '', state: 'AWAITING_USER', intent, requestorUpn };
       this.sessions.set(userId, session);
       
       let actionText = 'resetting a password';
@@ -48,7 +50,7 @@ export class IdentitySecurityFlow {
     switch (session.state) {
       case 'AWAITING_USER': {
         const inputStr = (text.toLowerCase() === 'mine' || text.toLowerCase() === 'me')
-          ? (context.activity.from.name || context.activity.from.aadObjectId || 'Current User')
+          ? session.requestorUpn
           : text;
 
         try {
@@ -154,14 +156,30 @@ export class IdentitySecurityFlow {
 
   private static async executeIntent(context: TurnContext, session: ResetSession) {
     const { GraphService } = await import('./graphService');
-    const { CardBuilder } = await import('../cards/cardBuilder');
+    const { M365CardBuilder } = await import('../cards/m365CardBuilder');
+
+    let ucCode = 'SUC001';
+    let taskName = 'Reset My Password';
+    if (session.intent === 'UNLOCK_ACCOUNT') { ucCode = 'SUC002'; taskName = 'Unlock My Account'; }
+    if (session.intent === 'RESET_SSPR') { ucCode = 'SUC006'; taskName = 'Reset SSPR Registration'; }
+
+    const audit: any = {
+      requestId: `REQ-${Math.floor(Math.random() * 10000)}`,
+      timestamp: new Date().toUTCString(),
+      initiatedBy: session.requestorUpn,
+      task: taskName,
+      target: session.targetUser,
+      status: 'Success',
+      approvalRequired: 'No'
+    };
 
     if (session.intent === 'RESET_PASSWORD') {
       const tempPassword = await GraphService.resetPassword(session.targetUser, true);
-      const card = CardBuilder.textResponseCard(
+      const card = M365CardBuilder.useCaseResultCard(
+        ucCode,
         'Password Reset Successful',
-        `Password has been reset. The temporary password for ${session.targetUser} is: **${tempPassword}**\n\nPlease ensure this is changed immediately upon next login.`,
-        'success'
+        audit,
+        [{ title: 'Result', facts: [{ title: 'Status:', value: 'Password reset to a temporary password.' }, { title: 'Temporary Password:', value: tempPassword }] }]
       );
       await context.sendActivity({ attachments: [card] });
 
@@ -179,19 +197,21 @@ export class IdentitySecurityFlow {
 
       // Cloud-only unlock
       await GraphService.revokeSignInSessions(session.targetUser);
-      const card = CardBuilder.textResponseCard(
+      const card = M365CardBuilder.useCaseResultCard(
+        ucCode,
         'Account Unlocked',
-        `Active sessions for ${session.targetUser} have been revoked and the account is cleared for fresh sign-in.\n\nIf they still cannot sign in, please request a Password Reset (SUC001).`,
-        'success'
+        audit,
+        [{ title: 'Result', facts: [{ title: 'Status:', value: 'Active sessions revoked and account cleared for fresh sign-in.' }] }]
       );
       await context.sendActivity({ attachments: [card] });
 
     } else if (session.intent === 'RESET_SSPR') {
       await GraphService.clearAuthenticationMethods(session.targetUser);
-      const card = CardBuilder.textResponseCard(
+      const card = M365CardBuilder.useCaseResultCard(
+        ucCode,
         'SSPR Registration Reset',
-        `Authentication methods for ${session.targetUser} have been cleared. They will be prompted to set up SSPR again on their next login.`,
-        'success'
+        audit,
+        [{ title: 'Result', facts: [{ title: 'Status:', value: 'Authentication methods cleared. Re-registration required on next login.' }] }]
       );
       await context.sendActivity({ attachments: [card] });
     }

@@ -47,6 +47,23 @@ export interface M365License {
   consumedUnits: number;
 }
 
+export interface SignInLog {
+  id: string;
+  createdDateTime: string;
+  userPrincipalName: string;
+  appDisplayName: string;
+  ipAddress: string;
+  location: {
+    city?: string;
+    state?: string;
+    countryOrRegion?: string;
+  };
+  status: {
+    errorCode: number;
+    failureReason?: string;
+  };
+}
+
 // ----------------------------------------------------
 // Mock Database State for M365 Tenant Simulator
 // ----------------------------------------------------
@@ -929,6 +946,67 @@ export class GraphService {
       return { before, after: newName };
     } catch (err: any) {
       throw new Error(`Graph API Rename Group failed: ${err.message}`);
+    }
+  }
+
+  // ----------------------------------------------------
+  // Audit Logs (Sign-Ins)
+  // ----------------------------------------------------
+  public static async getSignInHistory(upn: string, statusFilter: 'all' | 'failed' = 'all', limit: number = 5): Promise<SignInLog[]> {
+    const cleanUpn = upn.trim().toLowerCase();
+
+    if (config.m365Mock) {
+      // Generate some mock sign-ins
+      const logs: SignInLog[] = [];
+      const now = new Date().getTime();
+      const locations = [
+        { city: 'Seattle', state: 'WA', countryOrRegion: 'US' },
+        { city: 'New York', state: 'NY', countryOrRegion: 'US' },
+        { city: 'London', state: 'ENG', countryOrRegion: 'UK' },
+        { city: 'Unknown', state: 'Unknown', countryOrRegion: 'RU' }
+      ];
+
+      for (let i = 0; i < limit * 2; i++) {
+        const isFailed = Math.random() > 0.7; // 30% chance of failure
+        if (statusFilter === 'failed' && !isFailed) continue;
+
+        const loc = locations[Math.floor(Math.random() * locations.length)];
+        const timeOffset = Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000); // within 7 days
+        
+        logs.push({
+          id: `req-${Math.floor(Math.random() * 1000000)}`,
+          createdDateTime: new Date(now - timeOffset).toISOString(),
+          userPrincipalName: cleanUpn,
+          appDisplayName: Math.random() > 0.5 ? 'Office 365 Shell WCSS-Client' : 'Microsoft Teams Web Client',
+          ipAddress: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+          location: loc,
+          status: {
+            errorCode: isFailed ? 50126 : 0,
+            failureReason: isFailed ? 'Invalid username or password' : 'Other'
+          }
+        });
+
+        if (logs.length >= limit) break;
+      }
+      return logs.sort((a, b) => new Date(b.createdDateTime).getTime() - new Date(a.createdDateTime).getTime());
+    }
+
+    const client = this.getClient();
+    try {
+      let filter = `userPrincipalName eq '${cleanUpn}'`;
+      if (statusFilter === 'failed') {
+        filter += ' and status/errorCode ne 0';
+      }
+
+      const response = await client.api('/auditLogs/signIns')
+        .filter(filter)
+        .top(limit)
+        .orderby('createdDateTime desc')
+        .get();
+
+      return response.value as SignInLog[];
+    } catch (err: any) {
+      throw new Error(`Graph API Audit Logs Failed: ${err.message}. Ensure Azure AD Premium P1/P2 is active and AuditLog.Read.All permission is granted.`);
     }
   }
 }

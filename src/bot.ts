@@ -19,7 +19,8 @@ import { GraphService } from './services/graphService';
 import { ExchangeService } from './services/exchangeService';
 import { AIService } from './services/aiService';
 import { ApprovalService } from './services/approvalService';
-
+import { StateManager } from './services/stateManager';
+import { supportUseCases } from './useCases';
 
 export class CIS360SupportBot extends TeamsActivityHandler {
   private checkUseCaseEnabled: (context: TurnContext, ucCode: string) => Promise<boolean>;
@@ -75,11 +76,31 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       // Check Identity Security Flow state machine (SUC001, SUC002, SUC006)
       const rawText = (activity.text || '').trim();
       const text = rawText.toLowerCase();
+      const requestorUpn = await this.resolveRequestorUpn(context);
 
-      const flowResult = await IdentitySecurityFlow.handle(context, rawText);
+      const flowResult = await IdentitySecurityFlow.handle(context, rawText, requestorUpn);
       if (flowResult.handled) {
         if (flowResult.triggerHandoff) {
            await (this as any).initiateHandoff(context, flowResult.category);
+        }
+        await next();
+        return;
+      }
+
+      // Check if there is a pending AI execution for this user
+      const pendingExec = StateManager.getPendingExecution(userId);
+      if (pendingExec) {
+        if (text === 'yes' || text === 'y' || text === 'sure' || text === 'do it') {
+          StateManager.clearPendingExecution(userId);
+          const requestorUpn = await this.resolveRequestorUpn(context);
+          if (['SUC001', 'SUC002', 'SUC006'].includes(pendingExec.ucCode.toUpperCase())) {
+            await IdentitySecurityFlow.handle(context, pendingExec.ucCode, requestorUpn);
+          } else {
+            await this.executeM365UseCase(context, pendingExec.ucCode, pendingExec.parameters, true);
+          }
+        } else {
+          StateManager.clearPendingExecution(userId);
+          await context.sendActivity('Okay, I have cancelled that request.');
         }
         await next();
         return;
@@ -306,7 +327,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       case 'm365_form': {
         const uc = activity.value.uc;
         if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
-          await IdentitySecurityFlow.handle(context, uc);
+          await IdentitySecurityFlow.handle(context, uc, await this.resolveRequestorUpn(context));
           break;
         }
         if (await this.checkUseCaseEnabled(context, uc)) {
@@ -317,7 +338,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       case 'm365_run_direct': {
         const uc = activity.value.uc;
         if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
-          await IdentitySecurityFlow.handle(context, uc);
+          await IdentitySecurityFlow.handle(context, uc, await this.resolveRequestorUpn(context));
           break;
         }
         if (await this.checkUseCaseEnabled(context, uc)) {
@@ -330,7 +351,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       case 'm365_execute': {
         const uc = activity.value.uc;
         if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
-          await IdentitySecurityFlow.handle(context, uc);
+          await IdentitySecurityFlow.handle(context, uc, await this.resolveRequestorUpn(context));
           break;
         }
         if (await this.checkUseCaseEnabled(context, uc)) {
@@ -688,14 +709,10 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
         await context.sendActivity({ attachments: [card] });
       } else if (aiResponse.type === 'execute') {
-        const uc = aiResponse.ucCode;
-        if (uc === 'SUC001' || uc === 'SUC002' || uc === 'SUC006') {
-          await IdentitySecurityFlow.handle(context, uc);
-          return;
-        }
-        // Display Review & Confirm card to the user/requestor before execution
-        const card = M365CardBuilder.reviewAndConfirmCard(aiResponse.ucCode, aiResponse.parameters);
-        await context.sendActivity({ attachments: [card] });
+        StateManager.setPendingExecution(userId, aiResponse);
+        const useCase = supportUseCases.find(uc => uc.id === aiResponse.ucCode.toUpperCase());
+        const ucName = useCase ? useCase.name : aiResponse.ucCode;
+        await context.sendActivity(`I understand you want to **${aiResponse.actionDescription}**. This corresponds to **${ucName}**. Do you want me to execute this? (Yes/No)`);
       }
     } catch (err: any) {
       console.error('[NLP Interaction Error] Failed to process message via AI:', err.message);
@@ -1078,6 +1095,89 @@ export class CIS360SupportBot extends TeamsActivityHandler {
               { title: 'Alternate Email:', value: hasEmail ? user.otherMails!.join(', ') : 'Not Configured' }
             ]
           });
+          break;
+        }
+
+        case 'SUC030': { // View My Sign-in History
+          const upn = inputs.userUpn || requestorUpn;
+          const limit = inputs.limit ? parseInt(inputs.limit) : 5;
+          const logs = await GraphService.getSignInHistory(upn, 'all', limit);
+          
+          summaryText = `Recent Sign-in History for **${upn}** (Last ${limit} attempts).`;
+          
+          if (logs.length === 0) {
+            resultDetails.push({ title: 'Sign-ins', facts: [{ title: 'Result:', value: 'No sign-in history found.' }] });
+          } else {
+            logs.forEach((log, index) => {
+              const statusStr = log.status.errorCode === 0 ? '✅ Success' : `❌ Failed (${log.status.errorCode}: ${log.status.failureReason})`;
+              resultDetails.push({
+                title: `Attempt ${index + 1}`,
+                facts: [
+                  { title: 'Time:', value: new Date(log.createdDateTime).toLocaleString() },
+                  { title: 'Status:', value: statusStr },
+                  { title: 'App:', value: log.appDisplayName },
+                  { title: 'IP Address:', value: log.ipAddress },
+                  { title: 'Location:', value: `${log.location.city || 'Unknown'}, ${log.location.state || ''} ${log.location.countryOrRegion || ''}`.trim() }
+                ]
+              });
+            });
+          }
+          break;
+        }
+
+        case 'SUC031': { // View Failed Sign-ins
+          const upn = inputs.userUpn || requestorUpn;
+          const limit = inputs.limit ? parseInt(inputs.limit) : 5;
+          const logs = await GraphService.getSignInHistory(upn, 'failed', limit);
+          
+          summaryText = `Recent Failed Sign-ins for **${upn}** (Last ${limit} failures).`;
+          
+          if (logs.length === 0) {
+            resultDetails.push({ title: 'Failed Sign-ins', facts: [{ title: 'Result:', value: 'No failed sign-ins found! 🎉' }] });
+          } else {
+            logs.forEach((log, index) => {
+              resultDetails.push({
+                title: `Failure ${index + 1}`,
+                facts: [
+                  { title: 'Time:', value: new Date(log.createdDateTime).toLocaleString() },
+                  { title: 'Reason:', value: `${log.status.errorCode}: ${log.status.failureReason}` },
+                  { title: 'App:', value: log.appDisplayName },
+                  { title: 'IP Address:', value: log.ipAddress },
+                  { title: 'Location:', value: `${log.location.city || 'Unknown'}, ${log.location.state || ''} ${log.location.countryOrRegion || ''}`.trim() }
+                ]
+              });
+            });
+          }
+          break;
+        }
+
+        case 'SUC032': { // View Sign-in Locations
+          const upn = inputs.userUpn || requestorUpn;
+          const limit = inputs.limit ? parseInt(inputs.limit) : 10;
+          const logs = await GraphService.getSignInHistory(upn, 'all', limit);
+          
+          summaryText = `Recent Sign-in Locations for **${upn}** (Last ${limit} attempts).`;
+          
+          if (logs.length === 0) {
+            resultDetails.push({ title: 'Locations', facts: [{ title: 'Result:', value: 'No sign-in locations found.' }] });
+          } else {
+            // Group locations
+            const locationMap = new Map<string, number>();
+            logs.forEach(log => {
+              const locStr = `${log.location.city || 'Unknown'}, ${log.location.countryOrRegion || 'Unknown'}`;
+              locationMap.set(locStr, (locationMap.get(locStr) || 0) + 1);
+            });
+            
+            const facts = Array.from(locationMap.entries()).map(([loc, count]) => ({
+              title: loc,
+              value: `${count} sign-in(s)`
+            }));
+            
+            resultDetails.push({
+              title: 'Sign-in Frequency by Region',
+              facts: facts
+            });
+          }
           break;
         }
 
