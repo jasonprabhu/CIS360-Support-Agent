@@ -66,7 +66,8 @@ class MockM365Database {
         officeLocation: 'Redmond - Building 18',
         managerUpn: 'megan.bowen@tenant.onmicrosoft.com',
         accountEnabled: true,
-        assignedLicenses: ['Microsoft 365 E5 (DEVELOPER)']
+        assignedLicenses: ['Microsoft 365 E5 (DEVELOPER)'],
+        lastPasswordChangeDateTime: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() // 45 days ago
       }
     ],
     [
@@ -82,7 +83,8 @@ class MockM365Database {
         mobilePhone: '+1 425 555 0120',
         officeLocation: 'Seattle - HQ',
         accountEnabled: true,
-        assignedLicenses: ['Microsoft 365 E3']
+        assignedLicenses: ['Microsoft 365 E3'],
+        lastPasswordChangeDateTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() // 10 days ago
       }
     ],
     [
