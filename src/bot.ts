@@ -1099,6 +1099,27 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           break;
         }
 
+        case 'SUC010': { // Check MFA Enrollment Status
+          const upn = inputs.userUpn || requestorUpn;
+          const user = await GraphService.getUser(upn);
+          if (!user) throw new Error("User not found.");
+
+          const hasPhone = !!user.mobilePhone;
+          const hasEmail = user.otherMails && user.otherMails.length > 0;
+          const isEnrolled = hasPhone || hasEmail;
+
+          summaryText = `MFA Enrollment status for **${user.userPrincipalName}**.`;
+          resultDetails.push({
+            title: 'MFA Status',
+            facts: [
+              { title: 'MFA Enforced:', value: '✅ Yes' },
+              { title: 'Registration Status:', value: isEnrolled ? '✅ Registered' : '❌ Not Registered' },
+              { title: 'Configured Methods:', value: [hasPhone ? 'Phone' : null, hasEmail ? 'Email' : null].filter(Boolean).join(', ') || 'None' }
+            ]
+          });
+          break;
+        }
+
         case 'SUC030': { // View My Sign-in History
           const upn = inputs.userUpn || requestorUpn;
           const limit = inputs.limit ? parseInt(inputs.limit) : 5;
