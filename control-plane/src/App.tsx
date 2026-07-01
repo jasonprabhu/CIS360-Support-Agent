@@ -42,6 +42,25 @@ const Overview = () => (
         <p style={{ fontSize: '24px', fontWeight: 'bold' }}>3</p>
       </div>
     </div>
+    
+    <div style={{ marginTop: '32px' }}>
+      <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Product Roadmap</h3>
+      <div className="ms-card" style={{ padding: '24px' }}>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
+          Upcoming features being rolled out for the CIS360 Agent ecosystem:
+        </p>
+        <ul style={{ listStyleType: 'disc', paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <li>
+            <strong>Application Intelligence Dashboard</strong>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>A new module under Workplace Intelligence to monitor application usage, shadow IT, and app-level optimizations.</p>
+          </li>
+          <li>
+            <strong>License Unused Notification to Users</strong>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>Automated workflow to email users with dormant licenses, giving them a grace period before the license is reclaimed by the system.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 );
 
