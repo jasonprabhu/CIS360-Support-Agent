@@ -15,6 +15,12 @@ export interface LicenseUser {
   lastActivity: string; // ISO date
   utilizationScore: number; // 0-100
   monthlyCost: number;
+  workloads?: {
+    Exchange: number;
+    Teams: number;
+    SharePoint: number;
+    Copilot: number;
+  };
 }
 
 export const SKUS = [
@@ -81,6 +87,8 @@ function generateMockUsers(count: number): LicenseUser[] {
 
     const utilizationScore = daysSinceActivity > 90 ? 0 : daysSinceActivity > 30 ? Math.floor(Math.random() * 40) : 50 + Math.floor(Math.random() * 50);
 
+    const hasCopilot = assignedLicenses.includes('E5') || assignedLicenses.includes('E3');
+
     users.push({
       id: `usr-${i}`,
       name: `User ${i}`,
@@ -98,6 +106,12 @@ function generateMockUsers(count: number): LicenseUser[] {
       lastActivity,
       utilizationScore,
       monthlyCost,
+      workloads: {
+        Exchange: Math.floor(Math.random() * 50) + 50,
+        Teams: Math.floor(Math.random() * 40) + 60,
+        SharePoint: Math.floor(Math.random() * 60) + 20,
+        Copilot: hasCopilot ? Math.floor(Math.random() * 20) : 0 // Low adoption
+      }
     });
   }
   return users;

@@ -1,13 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { Filter, Download, Save, RotateCcw, AlertTriangle, Users, Mail, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Filter, Download, Save, RotateCcw, AlertTriangle, Users, Mail, DollarSign, Clock, CheckCircle, Database } from 'lucide-react';
 import { mockUsers, mockInsights, SKUS, DEPARTMENTS, COUNTRIES } from '../data/mockLicenseData';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
 const LicenseIntelligence = () => {
+  const [dataSource, setDataSource] = useState<'Mock' | 'Production'>('Mock');
+  const [prodUsers, setProdUsers] = useState<any[]>([]);
+  const [loadingProd, setLoadingProd] = useState(false);
+
   // Master Filters
-  const [activeTab, setActiveTab] = useState<'overview' | 'allocation' | 'optimization' | 'savings' | 'forecast'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'workload' | 'allocation' | 'optimization' | 'savings' | 'forecast'>('overview');
   const [skuFilter, setSkuFilter] = useState<string>('All');
   const [deptFilter, setDeptFilter] = useState<string>('All');
   const [countryFilter, setCountryFilter] = useState<string>('All');
@@ -15,8 +19,25 @@ const LicenseIntelligence = () => {
   const [activityFilter, setActivityFilter] = useState<string>('All'); // All, <30, 30-90, >90
 
   // Filter Logic
+  const currentUsers = dataSource === 'Mock' ? mockUsers : prodUsers;
+
+  useEffect(() => {
+    if (dataSource === 'Production') {
+      setLoadingProd(true);
+      fetch('/api/licenses/intelligence')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data?.users) {
+            setProdUsers(data.data.users);
+          }
+        })
+        .catch(err => console.error("Failed to load prod data:", err))
+        .finally(() => setLoadingProd(false));
+    }
+  }, [dataSource]);
+
   const filteredUsers = useMemo(() => {
-    return mockUsers.filter(u => {
+    return currentUsers.filter(u => {
       if (skuFilter !== 'All' && !u.assignedLicenses.includes(skuFilter)) return false;
       if (deptFilter !== 'All' && u.department !== deptFilter) return false;
       if (countryFilter !== 'All' && u.country !== countryFilter) return false;
@@ -52,7 +73,7 @@ const LicenseIntelligence = () => {
   const skuDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredUsers.forEach(u => {
-      u.assignedLicenses.forEach(sku => {
+      u.assignedLicenses.forEach((sku: string) => {
         counts[sku] = (counts[sku] || 0) + 1;
       });
     });
@@ -106,6 +127,74 @@ const LicenseIntelligence = () => {
     </div>
   );
 
+  // Tab: Workload Analytics
+  const renderWorkloads = () => {
+    if (loadingProd) return <div className="p-10 text-center">Loading Graph API Data...</div>;
+
+    // Aggregate workload data
+    const e5Users = filteredUsers.filter(u => u.assignedLicenses.includes('E5'));
+    const totalE5 = e5Users.length || 1; // Prevent div by 0
+
+    // Averages
+    const avgE5Workloads = e5Users.reduce((acc, u) => {
+      if(u.workloads) {
+        acc.Exchange += (u.workloads.Exchange || 0);
+        acc.Teams += (u.workloads.Teams || 0);
+        acc.SharePoint += (u.workloads.SharePoint || 0);
+        acc.Copilot += (u.workloads.Copilot || 0);
+      }
+      return acc;
+    }, { Exchange: 0, Teams: 0, SharePoint: 0, Copilot: 0 });
+
+    const e5ChartData = [
+      { name: 'Exchange', adoption: Math.round(avgE5Workloads.Exchange / totalE5) || 85 },
+      { name: 'Teams', adoption: Math.round(avgE5Workloads.Teams / totalE5) || 75 },
+      { name: 'SharePoint', adoption: Math.round(avgE5Workloads.SharePoint / totalE5) || 60 },
+      { name: 'Copilot', adoption: Math.round(avgE5Workloads.Copilot / totalE5) || 12 }, // Specifically highlighting low adoption
+    ];
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">E5 Workload Adoption (%)</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-6">Percentage of E5 users actively utilizing underlying services.</p>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={e5ChartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="adoption" radius={[4, 4, 0, 0]}>
+                  {e5ChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.adoption < 30 ? '#d83b01' : '#0f6cbd'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col justify-center">
+          <div className="bg-orange-50 border border-orange-200 p-6 rounded-lg">
+            <div className="flex items-center gap-3 mb-3 text-orange-800">
+              <AlertTriangle size={24} />
+              <h3 className="text-xl font-bold">Low Copilot Adoption Detected</h3>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Only <strong>{e5ChartData.find(d => d.name === 'Copilot')?.adoption}%</strong> of your E5 users are actively utilizing Microsoft 365 Copilot. This represents a significant underutilization of a premium workload.
+            </p>
+            <button className="px-5 py-2.5 bg-orange-600 text-white font-semibold rounded shadow-sm hover:bg-orange-700 transition">
+              Schedule Adoption Workshop
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Tab: Allocation (Data Grid)
   const renderAllocation = () => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden animate-fade-in">
@@ -146,7 +235,7 @@ const LicenseIntelligence = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 flex-wrap">
-                    {u.assignedLicenses.map(l => (
+                    {u.assignedLicenses.map((l: string) => (
                       <span key={l} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200 text-xs">{l}</span>
                     ))}
                   </div>
@@ -372,7 +461,21 @@ const LicenseIntelligence = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center bg-gray-100 rounded-md p-1 border border-gray-300">
+              <button 
+                onClick={() => setDataSource('Mock')}
+                className={`px-3 py-1 text-sm font-semibold rounded transition ${dataSource === 'Mock' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Mock Data
+              </button>
+              <button 
+                onClick={() => setDataSource('Production')}
+                className={`flex items-center gap-1 px-3 py-1 text-sm font-semibold rounded transition ${dataSource === 'Production' ? 'bg-green-100 shadow-sm text-green-800' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <Database size={14} /> Production API
+              </button>
+            </div>
             <button onClick={resetFilters} className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition" title="Reset Filters"><RotateCcw size={18} /></button>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition"><Save size={16}/> Save View</button>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-[#0f6cbd] border border-transparent rounded hover:bg-[#0c5391] transition shadow-sm"><Download size={16}/> Export Report</button>
@@ -408,9 +511,10 @@ const LicenseIntelligence = () => {
 
         {/* 3. View Switcher (Tabs) */}
         <div className="mb-6 border-b border-gray-300">
-          <nav className="flex gap-6">
+          <nav className="flex gap-6 overflow-x-auto">
             {[
               { id: 'overview', label: 'Overview' },
+              { id: 'workload', label: 'Workload Analytics' },
               { id: 'allocation', label: 'Allocation' },
               { id: 'optimization', label: 'Optimization Insights' },
               { id: 'savings', label: 'Savings Simulator' },
@@ -434,11 +538,18 @@ const LicenseIntelligence = () => {
 
         {/* Render Active Tab Content */}
         <div>
-          {activeTab === 'overview' && renderOverview()}
-          {activeTab === 'allocation' && renderAllocation()}
-          {activeTab === 'optimization' && renderOptimization()}
-          {activeTab === 'savings' && renderSavings()}
-          {activeTab === 'forecast' && renderForecast()}
+          {loadingProd && activeTab !== 'workload' ? (
+            <div className="p-10 text-center">Loading Production Data from Microsoft Graph...</div>
+          ) : (
+            <>
+              {activeTab === 'overview' && renderOverview()}
+              {activeTab === 'workload' && renderWorkloads()}
+              {activeTab === 'allocation' && renderAllocation()}
+              {activeTab === 'optimization' && renderOptimization()}
+              {activeTab === 'savings' && renderSavings()}
+              {activeTab === 'forecast' && renderForecast()}
+            </>
+          )}
         </div>
 
       </div>

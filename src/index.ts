@@ -68,7 +68,9 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 
 import settingsRoutes from './api/settingsRoutes';
+import licenseRoutes from './api/licenseRoutes';
 app.use('/api/settings', settingsRoutes);
+app.use('/api/licenses', licenseRoutes);
 
 // Main bot message routing endpoint
 app.post('/api/messages', async (req, res) => {
