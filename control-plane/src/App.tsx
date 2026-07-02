@@ -535,7 +535,16 @@ const SettingsPage = () => {
 };
 
 function App() {
+  const isTeamsTab = window.location.search.includes('view=teams-tab');
   const [activeTab, setActiveTab] = useState('overview');
+
+  if (isTeamsTab) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <MyWorkdayTab />
+      </div>
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {
