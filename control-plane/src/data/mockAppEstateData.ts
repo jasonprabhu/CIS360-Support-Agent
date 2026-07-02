@@ -71,10 +71,10 @@ export const generateMockAppEstateData = (): AppEstateRecord[] => {
       : `${majorVer}.${minorVer}`;
 
     const supportRand = Math.random();
-    const supportStatus = supportRand > 0.95 ? 'Deprecated' : supportRand > 0.85 ? 'Unsupported' : 'Supported';
+    const supportStatus = name === 'Chrome' ? 'Supported' : supportRand > 0.95 ? 'Deprecated' : supportRand > 0.85 ? 'Unsupported' : 'Supported';
 
     const riskRand = Math.random();
-    const riskLevel = isUnauthorized ? 'Critical' : (supportStatus === 'Unsupported' || supportStatus === 'Deprecated') ? 'High' : riskRand > 0.9 ? 'High' : riskRand > 0.7 ? 'Medium' : 'Low';
+    const riskLevel = isUnauthorized ? 'Critical' : (supportStatus === 'Unsupported' || supportStatus === 'Deprecated') ? 'High' : (name === 'Chrome' || riskRand > 0.9) ? 'High' : riskRand > 0.7 ? 'Medium' : 'Low';
 
     const usageRand = Math.random();
     const usageStatus = isPremium ? (usageRand > 0.5 ? 'Rarely Used' : 'Unused') : (usageRand > 0.8 ? 'Rarely Used' : usageRand > 0.95 ? 'Unused' : 'Active');
@@ -100,7 +100,7 @@ export const generateMockAppEstateData = (): AppEstateRecord[] => {
       riskLevel,
       usageStatus,
       lifecycleStage,
-      cveCount: riskLevel === 'High' || riskLevel === 'Critical' ? Math.floor(Math.random() * 10) + 1 : 0,
+      cveCount: (name === 'Chrome' || riskLevel === 'High' || riskLevel === 'Critical') ? Math.floor(Math.random() * 10) + 1 : 0,
       isUnauthorized,
       isDuplicate,
       monthlyCost: isPremium ? Math.floor(Math.random() * 50) + 20 : Math.floor(Math.random() * 10),

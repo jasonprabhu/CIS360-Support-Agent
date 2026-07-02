@@ -318,7 +318,7 @@ const AppEstateIntelligence = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {unauthApps.slice(0, 10).map(app => (
-                  <tr key={app.id} className="hover:bg-gray-50">
+                  <tr key={app.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedApp(app)}>
                     <td className="px-6 py-3 font-medium">{app.name}</td>
                     <td className="px-6 py-3 font-semibold text-red-600">{app.installations}</td>
                     <td className="px-6 py-3">{app.platform}</td>
@@ -353,7 +353,7 @@ const AppEstateIntelligence = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {vulnApps.slice(0, 10).map(app => (
-                  <tr key={app.id} className="hover:bg-gray-50">
+                  <tr key={app.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedApp(app)}>
                     <td className="px-6 py-3 font-medium">{app.name}</td>
                     <td className="px-6 py-3 text-gray-500">{app.version}</td>
                     <td className="px-6 py-3 font-bold text-orange-600">{app.cveCount}</td>
@@ -388,7 +388,7 @@ const AppEstateIntelligence = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {unsuppApps.slice(0, 10).map(app => (
-                  <tr key={app.id} className="hover:bg-gray-50">
+                  <tr key={app.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedApp(app)}>
                     <td className="px-6 py-3 font-medium">{app.name}</td>
                     <td className="px-6 py-3 text-gray-500">{app.publisher}</td>
                     <td className="px-6 py-3"><span className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">{app.supportStatus}</span></td>
@@ -463,8 +463,8 @@ const AppEstateIntelligence = () => {
               </div>
               
               <div className="mt-auto pt-4 border-t border-gray-100 flex justify-end gap-3">
-                <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">View Details</button>
-                <button className="px-4 py-2 text-sm font-medium text-white bg-[#0f6cbd] rounded hover:bg-[#0c5391] transition-colors shadow-sm">{insight.action} All</button>
+                <button onClick={() => setActiveTab('inventory')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">View Details</button>
+                <button onClick={() => alert(`${insight.action} action initiated for ${insight.title}`)} className="px-4 py-2 text-sm font-medium text-white bg-[#0f6cbd] rounded hover:bg-[#0c5391] transition-colors shadow-sm">{insight.action} All</button>
               </div>
             </div>
           ))}
@@ -673,7 +673,7 @@ const AppEstateIntelligence = () => {
               <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Unsupported</div>
               <div className="text-2xl font-bold text-red-600 mt-1">{unsupportedApps}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer" onClick={() => {resetFilters(); setActiveTab('risk');}}>
               <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Vulnerable</div>
               <div className="text-2xl font-bold text-red-700 mt-1">{vulnerableApps}</div>
             </div>
@@ -681,11 +681,11 @@ const AppEstateIntelligence = () => {
               <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Rarely Used</div>
               <div className="text-2xl font-bold text-yellow-600 mt-1">{rarelyUsed}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer" onClick={() => {resetFilters(); setActiveTab('risk');}}>
               <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Unauthorized</div>
               <div className="text-2xl font-bold text-red-800 mt-1">{unauthorized}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer" onClick={() => {resetFilters(); setActiveTab('optimization');}}>
               <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Opt. Opps</div>
               <div className="text-2xl font-bold text-green-600 mt-1">{optimizationOpps}</div>
             </div>
