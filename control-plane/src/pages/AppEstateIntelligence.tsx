@@ -19,6 +19,8 @@ const AppEstateIntelligence = () => {
   const [supportFilter, setSupportFilter] = useState('All');
   const [riskFilter, setRiskFilter] = useState('All');
   const [usageFilter, setUsageFilter] = useState('All');
+  const [sourceFilter, setSourceFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Sorting for Data Grid
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
@@ -34,11 +36,15 @@ const AppEstateIntelligence = () => {
       if (platFilter !== 'All' && app.platform !== platFilter) return false;
       if (countryFilter !== 'All' && app.country !== countryFilter) return false;
       if (supportFilter !== 'All' && app.supportStatus !== supportFilter) return false;
-      if (riskFilter !== 'All' && app.riskLevel !== riskFilter) return false;
-      if (usageFilter !== 'All' && app.usageStatus !== usageFilter) return false;
-      return true;
+      return (
+        (riskFilter === 'All' || app.riskLevel === riskFilter) &&
+        (usageFilter === 'All' || app.usageStatus === usageFilter) &&
+        (sourceFilter === 'All' || app.source === sourceFilter) &&
+        (app.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+         app.publisher.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
     });
-  }, [currentApps, pubFilter, catFilter, deptFilter, platFilter, countryFilter, supportFilter, riskFilter, usageFilter]);
+  }, [currentApps, pubFilter, catFilter, deptFilter, platFilter, countryFilter, supportFilter, riskFilter, usageFilter, sourceFilter, searchQuery]);
 
   const sortedApps = useMemo(() => {
     let sortable = [...filteredApps];
@@ -67,6 +73,8 @@ const AppEstateIntelligence = () => {
     setSupportFilter('All');
     setRiskFilter('All');
     setUsageFilter('All');
+    setSourceFilter('All');
+    setSearchQuery('');
   };
 
   const renderOverview = () => {
@@ -173,6 +181,7 @@ const AppEstateIntelligence = () => {
               <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => requestSort('category')}>Category {sortConfig?.key === 'category' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => requestSort('installations')}>Installs {sortConfig?.key === 'installations' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => requestSort('platform')}>Platform {sortConfig?.key === 'platform' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => requestSort('source')}>Source {sortConfig?.key === 'source' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => requestSort('supportStatus')}>Support {sortConfig?.key === 'supportStatus' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => requestSort('riskLevel')}>Risk {sortConfig?.key === 'riskLevel' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
             </tr>
@@ -186,6 +195,7 @@ const AppEstateIntelligence = () => {
                 <td className="px-6 py-4 text-gray-700">{app.category}</td>
                 <td className="px-6 py-4 font-semibold text-[#0f6cbd]">{app.installations.toLocaleString()}</td>
                 <td className="px-6 py-4 text-gray-700">{app.platform}</td>
+                <td className="px-6 py-4 text-gray-500 text-xs font-mono">{app.source}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded text-xs ${app.supportStatus === 'Supported' ? 'bg-green-100 text-green-800' : app.supportStatus === 'Deprecated' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'}`}>
                     {app.supportStatus}
@@ -235,7 +245,11 @@ const AppEstateIntelligence = () => {
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Primary Dept</p>
-                  <p className="text-sm font-medium text-gray-900">{selectedApp.department}</p>
+                  <span className="text-sm font-medium text-gray-900">{selectedApp.department}</span>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-600">Data Source</span>
+                  <span className="text-sm font-medium text-gray-900 bg-gray-100 px-2 py-1 rounded ml-2 text-xs">{selectedApp.source}</span>
                 </div>
               </div>
 
@@ -627,8 +641,9 @@ const AppEstateIntelligence = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-4">
           {[
+            { label: 'Source', val: sourceFilter, set: setSourceFilter, opts: ['All', 'Intune', 'SCCM', 'Defender', 'Entra ID'] },
             { label: 'Publisher', val: pubFilter, set: setPubFilter, opts: ['All', ...Array.from(new Set(mockAppEstate.map(a => a.publisher)))] },
             { label: 'Category', val: catFilter, set: setCatFilter, opts: ['All', ...Array.from(new Set(mockAppEstate.map(a => a.category)))] },
             { label: 'Department', val: deptFilter, set: setDeptFilter, opts: ['All', ...Array.from(new Set(mockAppEstate.map(a => a.department)))] },

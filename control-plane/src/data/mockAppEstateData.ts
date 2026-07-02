@@ -15,13 +15,14 @@ export interface AppEstateRecord {
   lifecycleStage: 'New' | 'Active' | 'Aging' | 'Unsupported' | 'Deprecated';
   cveCount: number;
   isUnauthorized: boolean;
-  isDuplicate: boolean; // Flag if it's considered part of a duplicate functional group
-  monthlyCost: number; // Cost per user
+  isDuplicate: boolean;
+  monthlyCost: number;
+  source: string;
   eolDate?: string;
   businessOwner: string;
 }
 
-const PUBLISHERS = ['Microsoft', 'Adobe', 'Google', 'Zoom', 'Oracle', 'Atlassian', 'Autodesk', 'Salesforce', 'Slack', 'Cisco'];
+const PUBLISHERS = ['Microsoft', 'Adobe', 'Zoom', 'Slack', 'Atlassian', 'Google', 'Cisco', 'Salesforce', 'Autodesk', 'Oracle'];
 const CATEGORIES = ['Collaboration', 'Browsers', 'Security', 'Utilities', 'Design', 'Development', 'Finance', 'HR', 'CRM'];
 const DEPARTMENTS = ['Engineering', 'Sales', 'Marketing', 'HR', 'Finance', 'Operations', 'Legal', 'IT'];
 const COUNTRIES = ['USA', 'UK', 'Canada', 'Germany', 'Australia', 'Japan', 'India', 'Brazil'];
@@ -32,6 +33,8 @@ const DUPLICATE_GROUPS = [
   ['Zoom', 'Teams', 'Webex'],
   ['Adobe Reader', 'Foxit Reader', 'Nitro PDF']
 ];
+const PLATFORMS = ['Windows', 'Mac', 'Mobile'] as const;
+const SOURCES = ['Intune', 'SCCM', 'Defender', 'Entra ID'];
 
 export const generateMockAppEstateData = (): AppEstateRecord[] => {
   const apps: AppEstateRecord[] = [];
@@ -79,8 +82,7 @@ export const generateMockAppEstateData = (): AppEstateRecord[] => {
     const usageRand = Math.random();
     const usageStatus = isPremium ? (usageRand > 0.5 ? 'Rarely Used' : 'Unused') : (usageRand > 0.8 ? 'Rarely Used' : usageRand > 0.95 ? 'Unused' : 'Active');
 
-    const platformRand = Math.random();
-    const platform = platformRand > 0.6 ? 'Windows' : platformRand > 0.9 ? 'Mac' : 'Mobile';
+    const platform = PLATFORMS[Math.floor(Math.random() * PLATFORMS.length)];
 
     const lifecycleRand = Math.random();
     const lifecycleStage = supportStatus === 'Deprecated' ? 'Deprecated' : supportStatus === 'Unsupported' ? 'Unsupported' : lifecycleRand > 0.8 ? 'Aging' : lifecycleRand > 0.1 ? 'Active' : 'New';
@@ -104,6 +106,7 @@ export const generateMockAppEstateData = (): AppEstateRecord[] => {
       isUnauthorized,
       isDuplicate,
       monthlyCost: isPremium ? Math.floor(Math.random() * 50) + 20 : Math.floor(Math.random() * 10),
+      source: SOURCES[Math.floor(Math.random() * SOURCES.length)],
       eolDate: supportStatus !== 'Supported' ? '2025-12-31' : undefined,
       businessOwner: `Owner ${Math.floor(Math.random() * 50)}`
     });
