@@ -20,6 +20,7 @@ const AppEstateIntelligence = () => {
   const [riskFilter, setRiskFilter] = useState('All');
   const [usageFilter, setUsageFilter] = useState('All');
   const [sourceFilter, setSourceFilter] = useState('All');
+  const [optimizationFilter, setOptimizationFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sorting for Data Grid
@@ -36,6 +37,11 @@ const AppEstateIntelligence = () => {
       if (platFilter !== 'All' && app.platform !== platFilter) return false;
       if (countryFilter !== 'All' && app.country !== countryFilter) return false;
       if (supportFilter !== 'All' && app.supportStatus !== supportFilter) return false;
+      if (optimizationFilter === 'Duplicates' && !app.isDuplicate) return false;
+      if (optimizationFilter === 'Premium Unused' && !((app.usageStatus === 'Rarely Used' || app.usageStatus === 'Unused') && app.monthlyCost > 15)) return false;
+      if (optimizationFilter === 'Orphaned' && !(!app.businessOwner || app.businessOwner.startsWith('Owner 4'))) return false;
+      if (optimizationFilter === 'Zero-Usage' && app.usageStatus !== 'Unused') return false;
+
       return (
         (riskFilter === 'All' || app.riskLevel === riskFilter) &&
         (usageFilter === 'All' || app.usageStatus === usageFilter) &&
@@ -44,7 +50,7 @@ const AppEstateIntelligence = () => {
          app.publisher.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     });
-  }, [currentApps, pubFilter, catFilter, deptFilter, platFilter, countryFilter, supportFilter, riskFilter, usageFilter, sourceFilter, searchQuery]);
+  }, [currentApps, pubFilter, catFilter, deptFilter, platFilter, countryFilter, supportFilter, riskFilter, usageFilter, sourceFilter, optimizationFilter, searchQuery]);
 
   const sortedApps = useMemo(() => {
     let sortable = [...filteredApps];
@@ -74,6 +80,7 @@ const AppEstateIntelligence = () => {
     setRiskFilter('All');
     setUsageFilter('All');
     setSourceFilter('All');
+    setOptimizationFilter('All');
     setSearchQuery('');
   };
 
@@ -477,7 +484,14 @@ const AppEstateIntelligence = () => {
               </div>
               
               <div className="mt-auto pt-4 border-t border-gray-100 flex justify-end gap-3">
-                <button onClick={() => setActiveTab('inventory')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">View Details</button>
+                <button onClick={() => {
+                  resetFilters();
+                  if (insight.id === 1) setOptimizationFilter('Duplicates');
+                  if (insight.id === 2) setOptimizationFilter('Premium Unused');
+                  if (insight.id === 3) setOptimizationFilter('Orphaned');
+                  if (insight.id === 4) setOptimizationFilter('Zero-Usage');
+                  setActiveTab('inventory');
+                }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">View Details</button>
                 <button onClick={() => alert(`${insight.action} action initiated for ${insight.title}`)} className="px-4 py-2 text-sm font-medium text-white bg-[#0f6cbd] rounded hover:bg-[#0c5391] transition-colors shadow-sm">{insight.action} All</button>
               </div>
             </div>
@@ -582,7 +596,7 @@ const AppEstateIntelligence = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredApps.slice(0, 100).map(app => (
-                <tr key={app.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={app.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedApp(app)}>
                   <td className="px-6 py-4 font-medium text-gray-900">{app.name}</td>
                   <td className="px-6 py-4 text-gray-500">{app.version}</td>
                   <td className="px-6 py-4 text-gray-700">{app.publisher}</td>
