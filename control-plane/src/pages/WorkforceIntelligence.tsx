@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
-import { Filter, Download, Save, RotateCcw, Users, Clock, AlertCircle, PhoneCall, BedDouble, AlertTriangle, MonitorPlay, Database } from 'lucide-react';
+import { Filter, Download, Save, RotateCcw, Users, AlertCircle, PhoneCall, MonitorPlay, Database } from 'lucide-react';
 import { mockWorkforceData } from '../data/mockWorkforceData';
-import type { WorkforceRecord } from '../data/mockWorkforceData';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 const PRESENCE_COLORS: Record<string, string> = {
