@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Clock, Play, Square, Coffee, CheckCircle, List, Users } from 'lucide-react';
+import { app, authentication } from '@microsoft/teams-js';
 
 const MyWorkdayTab = () => {
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string>('CurrentUser');
+  const [authToken, setAuthToken] = useState<string>('');
 
-  const fetchStatus = async () => {
+  const fetchStatus = async (token?: string) => {
     try {
-      const res = await fetch('/api/workday/me');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const currentToken = token || authToken;
+      if (currentToken) {
+        headers['Authorization'] = `Bearer ${currentToken}`;
+      }
+      const res = await fetch('/api/workday/me', { headers });
       const data = await res.json();
       if (data.status === 'success') {
         setStatus(data.data);
@@ -20,15 +28,37 @@ const MyWorkdayTab = () => {
   };
 
   useEffect(() => {
-    fetchStatus();
+    const initTeams = async () => {
+      try {
+        await app.initialize();
+        const context = await app.getContext();
+        const email = context.user?.userPrincipalName || 'TeamsUser';
+        setUserEmail(email);
+
+        // Fetch auth token
+        const token = await authentication.getAuthToken();
+        setAuthToken(token);
+        
+        await fetchStatus(token);
+      } catch (err) {
+        console.warn('Not running in Teams, using fallback mock user', err);
+        await fetchStatus();
+      }
+    };
+    initTeams();
   }, []);
 
   const handleAction = async (endpoint: string) => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
       const res = await fetch(`/api/workday/${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: 'CurrentUser' })
+        headers,
+        body: JSON.stringify({ user: userEmail })
       });
       const data = await res.json();
       alert(data.message);
@@ -45,9 +75,14 @@ const MyWorkdayTab = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 animate-fade-in">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">My Workday</h2>
-        <p className="text-gray-500">Manage your presence, attendance, and work hours.</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">My Workday</h2>
+          <p className="text-gray-500">Manage your presence, attendance, and work hours.</p>
+        </div>
+        <div className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+          User: <span className="text-gray-900">{userEmail}</span>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
