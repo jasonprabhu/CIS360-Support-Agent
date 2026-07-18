@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.15/MicrosoftTeams.schema.json",
   "manifestVersion": "1.15",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "id": "f598bc5d-5bdc-483a-a254-3ba923e38d63",
   "packageName": "com.cis360.support",
   "developer": {
@@ -15,8 +15,8 @@
     "outline": "outline.png"
   },
   "name": {
-    "short": "CIS Support Agent",
-    "full": "CIS360 Support & Administration Portal"
+    "short": "CIS360",
+    "full": "CIS360"
   },
   "description": {
     "short": "L1 M365 admin assistant and ServiceNow portal.",
