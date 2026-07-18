@@ -9,6 +9,7 @@ import {
   TeamsInfo
 } from 'botbuilder';
 import { IdentitySecurityFlow } from './services/identitySecurityFlow';
+import { ExchangeSupportFlow } from './services/exchangeSupportFlow';
 import { SettingsService } from './services/settingsService';
 import { config } from './config';
 import { CardBuilder } from './cards/cardBuilder';
@@ -86,6 +87,14 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         if (flowResult.triggerHandoff) {
            await (this as any).initiateHandoff(context, flowResult.category);
         }
+        await next();
+        return;
+      }
+
+      // Check Exchange Support Flow
+      const exFlowResult = await ExchangeSupportFlow.handle(context, rawText, requestorUpn);
+      if (exFlowResult.handled) {
+        StateManager.clearHistory(userId);
         await next();
         return;
       }

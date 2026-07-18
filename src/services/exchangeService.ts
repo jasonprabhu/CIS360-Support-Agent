@@ -344,7 +344,46 @@ export class ExchangeService {
       throw new Error(`Set Automatic Replies failed: ${err.message}`);
     }
   }
+  public static async getAutomaticRepliesStatus(upn: string): Promise<{ isEnabled: boolean; message: string }> {
+    const cleanUpn = upn.trim().toLowerCase();
 
+    if (config.m365Mock) {
+      const mbox = MockExchangeDatabase.mailboxes.get(cleanUpn);
+      if (!mbox) throw new Error(`Mailbox not found: ${cleanUpn}`);
+
+      return mbox.autoReply || { isEnabled: false, message: '' };
+    }
+
+    const client = this.getClient();
+    try {
+      const res = await client.api(`/users/${cleanUpn}/mailboxSettings`).get();
+      const autoReply = res.automaticRepliesSetting;
+      return {
+        isEnabled: autoReply.status !== 'disabled',
+        message: autoReply.internalReplyMessage || autoReply.externalReplyMessage || ''
+      };
+    } catch (err: any) {
+      throw new Error(`Get Automatic Replies failed: ${err.message}`);
+    }
+  }
+
+  public static async getFreeBusySettings(upn: string): Promise<{ userUpn: string; sharingEnabled: boolean; defaultPermission: string }> {
+    const cleanUpn = upn.trim().toLowerCase();
+
+    // Mock response for free/busy
+    if (config.m365Mock) {
+      return { userUpn: cleanUpn, sharingEnabled: true, defaultPermission: 'AvailabilityOnly' };
+    }
+
+    const client = this.getClient();
+    try {
+      // Free/Busy usually accessed via calendar permissions in Graph
+      const res = await client.api(`/users/${cleanUpn}/calendar/calendarPermissions`).get();
+      return { userUpn: cleanUpn, sharingEnabled: true, defaultPermission: 'AvailabilityOnly' };
+    } catch (err: any) {
+      throw new Error(`Get Free/Busy settings failed: ${err.message}`);
+    }
+  }
   public static async increaseMailboxQuota(upn: string, newMaxGb: number): Promise<number> {
     const cleanUpn = upn.trim().toLowerCase();
 

@@ -521,4 +521,110 @@ export class M365CardBuilder {
 
     return this.toAttachment(card);
   }
+
+  // ==========================================
+  // EXCHANGE ONLINE CARDS
+  // ==========================================
+
+  public static mailboxSizeCard(upn: string, sizeGb: number, maxSizeGb: number, percentUsed: number): Attachment {
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.5',
+      body: [
+        {
+          type: 'Container',
+          style: percentUsed > 90 ? 'attention' : 'good',
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: '📊 Mailbox Storage Report',
+              weight: 'Bolder',
+              size: 'Medium'
+            }
+          ]
+        },
+        {
+          type: 'FactSet',
+          facts: [
+            { title: 'User:', value: upn },
+            { title: 'Used Space:', value: `${sizeGb.toFixed(2)} GB` },
+            { title: 'Quota limit:', value: `${maxSizeGb.toFixed(2)} GB` },
+            { title: 'Utilization:', value: `${Math.round(percentUsed)}%` }
+          ]
+        }
+      ]
+    };
+    return this.toAttachment(card);
+  }
+
+  public static autoReplyStatusCard(upn: string, isEnabled: boolean, message: string): Attachment {
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.5',
+      body: [
+        {
+          type: 'Container',
+          style: isEnabled ? 'warning' : 'good',
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: '🏖️ Out of Office (OOF) Status',
+              weight: 'Bolder',
+              size: 'Medium'
+            }
+          ]
+        },
+        {
+          type: 'FactSet',
+          facts: [
+            { title: 'User:', value: upn },
+            { title: 'Status:', value: isEnabled ? 'Active' : 'Disabled' }
+          ]
+        },
+        ...(isEnabled && message ? [{
+          type: 'TextBlock',
+          text: '**Message:**\n\n' + message,
+          wrap: true,
+          spacing: 'Medium'
+        }] : [])
+      ]
+    };
+    return this.toAttachment(card);
+  }
+
+  public static freeBusyStatusCard(upn: string, sharingEnabled: boolean, defaultPermission: string): Attachment {
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.5',
+      body: [
+        {
+          type: 'Container',
+          style: 'accent',
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: '📅 Calendar Free/Busy Settings',
+              weight: 'Bolder',
+              size: 'Medium'
+            }
+          ]
+        },
+        {
+          type: 'FactSet',
+          facts: [
+            { title: 'User:', value: upn },
+            { title: 'Sharing Enabled:', value: sharingEnabled ? 'Yes' : 'No' },
+            { title: 'Default Permission:', value: defaultPermission }
+          ]
+        }
+      ]
+    };
+    return this.toAttachment(card);
+  }
 }
