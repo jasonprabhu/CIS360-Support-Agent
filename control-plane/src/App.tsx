@@ -69,6 +69,7 @@ const Overview = () => (
 
 const AutomationHub = () => {
   const [enabledState, setEnabledState] = useState<Record<string, boolean>>({});
+  const [activeUcTab, setActiveUcTab] = useState<'Entra' | 'EXO' | 'SPO' | 'ODFB'>('Entra');
 
   useEffect(() => {
     fetch('/api/settings')
@@ -106,6 +107,8 @@ const AutomationHub = () => {
     }
   };
 
+  const filteredUseCases = supportUseCases.filter(uc => uc.category === activeUcTab);
+
   return (
     <div className="animate-fade-in">
       <div className="page-header">
@@ -113,6 +116,22 @@ const AutomationHub = () => {
         <p className="page-subtitle">Manage deployed support use cases for your organization.</p>
       </div>
       
+      <div className="mb-6 flex border-b border-gray-200">
+        {(['Entra', 'EXO', 'SPO', 'ODFB'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveUcTab(tab)}
+            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
+              activeUcTab === tab
+                ? 'border-[#5C2D91] text-[#5C2D91]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {tab} Use Cases
+          </button>
+        ))}
+      </div>
+
       <div className="ms-card">
         <div className="ms-grid-header" style={{ gridTemplateColumns: '80px 100px 2fr 3fr 1fr 1fr' }}>
           <div>Status</div>
@@ -122,21 +141,27 @@ const AutomationHub = () => {
           <div>Category</div>
           <div>Actor</div>
         </div>
-        {supportUseCases.map(uc => (
-          <div key={uc.id} className="ms-grid-row" style={{ gridTemplateColumns: '80px 100px 2fr 3fr 1fr 1fr', opacity: enabledState[uc.id] ? 1 : 0.6 }}>
-            <div>
-              <label className="toggle-switch">
-                <input type="checkbox" checked={!!enabledState[uc.id]} onChange={() => toggleUc(uc.id)} />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-            <div style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{uc.id}</div>
-            <div style={{ fontWeight: 600 }}>{uc.name}</div>
-            <div style={{ color: 'var(--text-secondary)' }}>{uc.description}</div>
-            <div><span className="ms-badge">{uc.category}</span></div>
-            <div>{uc.actor}</div>
+        {filteredUseCases.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            No {activeUcTab} use cases available yet.
           </div>
-        ))}
+        ) : (
+          filteredUseCases.map(uc => (
+            <div key={uc.id} className="ms-grid-row" style={{ gridTemplateColumns: '80px 100px 2fr 3fr 1fr 1fr', opacity: enabledState[uc.id] ? 1 : 0.6 }}>
+              <div>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={!!enabledState[uc.id]} onChange={() => toggleUc(uc.id)} />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+              <div style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{uc.id}</div>
+              <div style={{ fontWeight: 600 }}>{uc.name}</div>
+              <div style={{ color: 'var(--text-secondary)' }}>{uc.description}</div>
+              <div><span className="ms-badge">{uc.category}</span></div>
+              <div>{uc.actor}</div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
