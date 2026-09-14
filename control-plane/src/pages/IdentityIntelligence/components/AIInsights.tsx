@@ -38,7 +38,7 @@ const AIInsights = ({ onDrilldown }: AIInsightsProps) => {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {insights.map(insight => (
-          <div key={insight.id} className={\`border-l-4 rounded-r-lg p-4 flex flex-col justify-between h-full shadow-sm \${getSeverityStyle(insight.severity)}\`}>
+          <div key={insight.id} className={"border-l-4 rounded-r-lg p-4 flex flex-col justify-between h-full shadow-sm " + getSeverityStyle(insight.severity)}>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider">{getSeverityDot(insight.severity)} {insight.severity}</span>

@@ -15,7 +15,7 @@ const IssuesTable = ({ onDrilldown }: IssuesTableProps) => {
     if (risk === 'High') color = 'bg-red-100 text-red-800';
     if (risk === 'Medium') color = 'bg-orange-100 text-orange-800';
     if (risk === 'Low') color = 'bg-green-100 text-green-800';
-    return <span className={\`px-2.5 py-0.5 rounded-full text-xs font-medium \${color}\`}>{risk}</span>;
+    return <span className={"px-2.5 py-0.5 rounded-full text-xs font-medium " + color}>{risk}</span>;
   };
 
   const filteredIssues = issues.filter(issue => 

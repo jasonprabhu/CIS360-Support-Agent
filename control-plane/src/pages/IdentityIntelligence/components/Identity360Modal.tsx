@@ -10,9 +10,9 @@ const Identity360Modal = ({ isOpen, onClose, payload }: Identity360ModalProps) =
   const { type, data } = payload;
 
   const getTitle = () => {
-    if (type === 'insight') return \`Insight: \${data.severity}\`;
-    if (type === 'kpi') return \`Metric Deep Dive: \${data.title}\`;
-    if (type === 'issue') return \`Issue Investigation: \${data.userName}\`;
+    if (type === 'insight') return "Insight: " + data.severity;
+    if (type === 'kpi') return "Metric Deep Dive: " + data.title;
+    if (type === 'issue') return "Issue Investigation: " + data.userName;
     return 'Identity deep dive';
   };
 

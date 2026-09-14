@@ -23,7 +23,7 @@ const KPIGrid = ({ onDrilldown }: KPIGridProps) => {
     if (status === 'critical') color = 'text-red-600';
 
     const dir = trend > 0 ? '↑' : (trend < 0 ? '↓' : '-');
-    return <span className={\`text-xs font-semibold \${color}\`}>{dir} {Math.abs(trend)}%</span>;
+    return <span className={"text-xs font-semibold " + color}>{dir} {Math.abs(trend)}%</span>;
   };
 
   return (
@@ -51,12 +51,12 @@ const KPIGrid = ({ onDrilldown }: KPIGridProps) => {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={kpi.history.map((val, i) => ({ value: val, index: i }))} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id={\`color-\${idx}\`} x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={"color-" + idx} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={getTrendColor(kpi.status)} stopOpacity={0.25}/>
                       <stop offset="95%" stopColor={getTrendColor(kpi.status)} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="value" stroke={getTrendColor(kpi.status)} fillOpacity={1} fill={\`url(#color-\${idx})\`} strokeWidth={2.5} isAnimationActive={false} />
+                  <Area type="monotone" dataKey="value" stroke={getTrendColor(kpi.status)} fillOpacity={1} fill={"url(#color-" + idx + ")"} strokeWidth={2.5} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
