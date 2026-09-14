@@ -96,7 +96,7 @@ const Dashboard = () => {
       </section>
 
       <section className="pt-4 pb-12">
-        <RootCauseAI onDrilldown={(payload) => setDrilldown(payload)} />
+        <RootCauseAI />
       </section>
 
       <SharePoint360Modal isOpen={!!drilldown} onClose={() => setDrilldown(null)} payload={drilldown} />
