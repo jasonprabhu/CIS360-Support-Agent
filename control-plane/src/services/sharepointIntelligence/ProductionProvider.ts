@@ -1,4 +1,4 @@
-import type { ISharePointDataProvider, KPI, Insight, HealthScore, ContentActivityData, Site, StorageWaste, StorageHotspot } from './types';
+import type { ISharePointDataProvider, KPI, Insight, HealthScore, ContentActivityData, Site, StorageWaste, StorageHotspot, AccessNode, GovernanceCompliance, LifecycleAging } from './types';
 
 export class ProductionSharePointDataProvider implements ISharePointDataProvider {
   isConfigured = false;
@@ -10,6 +10,10 @@ export class ProductionSharePointDataProvider implements ISharePointDataProvider
   oneDriveDistribution = [];
   storageWaste: StorageWaste[] = [];
   storageHotspots: StorageHotspot[] = [];
+  sharingMetrics = { anonymous: 0, specificExternal: 0, guest: 0, internal: 0 };
+  accessPath: AccessNode[] = [];
+  governance: GovernanceCompliance = { overall: 0, ownership: 0, sharing: 0, lifecycle: 0, permissions: 0, storage: 0 };
+  lifecycleAging: LifecycleAging[] = [];
 
   async refreshData() {
     return Promise.resolve();

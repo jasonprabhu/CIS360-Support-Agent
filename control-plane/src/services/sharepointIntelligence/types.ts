@@ -62,6 +62,26 @@ export interface StorageHotspot {
   lastActivity: string;
 }
 
+export interface AccessNode {
+  name: string;
+  type: 'User' | 'Group' | 'Site' | 'Folder' | 'File';
+  role?: string;
+}
+
+export interface GovernanceCompliance {
+  overall: number;
+  ownership: number;
+  sharing: number;
+  lifecycle: number;
+  permissions: number;
+  storage: number;
+}
+
+export interface LifecycleAging {
+  range: string;
+  tb: number;
+}
+
 export interface ISharePointDataProvider {
   isConfigured: boolean;
   healthScore: HealthScore;
@@ -72,5 +92,9 @@ export interface ISharePointDataProvider {
   oneDriveDistribution: { range: string; count: number }[];
   storageWaste: StorageWaste[];
   storageHotspots: StorageHotspot[];
+  sharingMetrics: { anonymous: number; specificExternal: number; guest: number; internal: number };
+  accessPath: AccessNode[];
+  governance: GovernanceCompliance;
+  lifecycleAging: LifecycleAging[];
   refreshData: () => Promise<void>;
 }

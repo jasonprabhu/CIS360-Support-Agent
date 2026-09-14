@@ -8,6 +8,10 @@ import ContentActivity from './components/ContentActivity';
 import SharepointSiteIntelligence from './components/SharepointSiteIntelligence';
 import OneDriveIntelligence from './components/OneDriveIntelligence';
 import StorageIntelligence from './components/StorageIntelligence';
+import SharingIntelligence from './components/SharingIntelligence';
+import WhoHasAccess from './components/WhoHasAccess';
+import ContentRiskGovernance from './components/ContentRiskGovernance';
+import LifecycleIntelligence from './components/LifecycleIntelligence';
 
 const Dashboard = () => {
   const { data, isMockMode } = useSharePointData();
@@ -65,9 +69,25 @@ const Dashboard = () => {
         <StorageIntelligence />
       </section>
 
-      {/* Placeholders for Phase 4+ */}
+      <section className="pt-4">
+        <SharingIntelligence />
+      </section>
+
+      <section className="pt-4">
+        <WhoHasAccess />
+      </section>
+
+      <section className="pt-4">
+        <ContentRiskGovernance />
+      </section>
+
+      <section className="pt-4 pb-12 border-b border-gray-200">
+        <LifecycleIntelligence />
+      </section>
+
+      {/* Placeholders for Phase 5+ */}
       <section className="py-12 text-center text-gray-400">
-        <p>Sharing, Governance, & Support Intelligence modules will load here...</p>
+        <p>Support Intelligence & AI Root Cause modules will load here...</p>
       </section>
     </div>
   );

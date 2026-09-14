@@ -1,4 +1,4 @@
-import type { ISharePointDataProvider, KPI, Insight, HealthScore, ContentActivityData, Site, StorageWaste, StorageHotspot } from './types';
+import type { ISharePointDataProvider, KPI, Insight, HealthScore, ContentActivityData, Site, StorageWaste, StorageHotspot, AccessNode, GovernanceCompliance, LifecycleAging } from './types';
 
 export class MockSharePointDataProvider implements ISharePointDataProvider {
   isConfigured = true;
@@ -72,6 +72,39 @@ export class MockSharePointDataProvider implements ISharePointDataProvider {
     { name: 'Finance Portal', type: 'Site', sizeGB: 1840, growthPercent: 18.2, lastActivity: 'Today' },
     { name: 'Anita Borg (ODFB)', type: 'OneDrive', sizeGB: 840, growthPercent: 24.1, lastActivity: '2 days ago' },
     { name: 'Project Phoenix', type: 'Site', sizeGB: 1200, growthPercent: 0, lastActivity: '7 months ago' },
+  ];
+
+  sharingMetrics = {
+    anonymous: 412,
+    specificExternal: 1240,
+    guest: 829,
+    internal: 14200
+  };
+
+  accessPath: AccessNode[] = [
+    { name: 'John Doe', type: 'User' },
+    { name: 'Finance Security Group', type: 'Group' },
+    { name: 'Finance Portal', type: 'Site' },
+    { name: 'Budget Folder', type: 'Folder' },
+    { name: 'FY2026.xlsx', type: 'File', role: 'Contributor' }
+  ];
+
+  governance: GovernanceCompliance = {
+    overall: 81,
+    ownership: 88,
+    sharing: 79,
+    lifecycle: 76,
+    permissions: 82,
+    storage: 91
+  };
+
+  lifecycleAging: LifecycleAging[] = [
+    { range: '0–30 days', tb: 12.4 },
+    { range: '31–90 days', tb: 18.1 },
+    { range: '91–180 days', tb: 24.5 },
+    { range: '181–365 days', tb: 14.2 },
+    { range: '1–3 years', tb: 8.4 },
+    { range: '3+ years', tb: 6.6 }
   ];
 
   async refreshData() {
