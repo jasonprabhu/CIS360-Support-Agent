@@ -1,6 +1,6 @@
 import { useSharePointData } from '../../../services/sharepointIntelligence/SharePointDataProvider';
 
-const RootCauseAI = ({ onDrilldown }: { onDrilldown?: (data: any) => void }) => {
+const RootCauseAI = (/* { onDrilldown }: { onDrilldown?: (data: any) => void } */) => {
   const { data } = useSharePointData();
   const { rootCauseTimeline } = data;
 
