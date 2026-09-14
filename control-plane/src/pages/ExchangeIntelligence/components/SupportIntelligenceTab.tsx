@@ -1,5 +1,5 @@
 import { useExchangeData } from '../../../services/exchangeIntelligence/ExchangeDataProvider';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const SupportIntelligenceTab = () => {
   const { data } = useExchangeData();
