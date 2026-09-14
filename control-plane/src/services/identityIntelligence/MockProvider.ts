@@ -27,15 +27,28 @@ export class MockIdentityDataProvider implements IIdentityDataProvider {
     explanation: 'Identity health improved 3.4% this month, primarily due to increased MFA coverage and reduced inactive accounts. License efficiency remains the biggest opportunity.'
   };
 
+  private generateTrendData(start: number, end: number, volatility: number = 10): number[] {
+    const data = [];
+    const steps = 30;
+    for (let i = 0; i <= steps; i++) {
+      const progress = i / steps;
+      // Linear interpolation + noise
+      const val = start + (end - start) * progress;
+      const noise = (seededRandom(i * 100) - 0.5) * volatility;
+      data.push(Math.max(0, val + noise));
+    }
+    return data;
+  }
+
   kpis: KPI[] = [
-    { title: 'Total Identities', value: '12,482', trend: 2.8, status: 'neutral' },
-    { title: 'Risky Identities', value: 34, trend: -12.4, status: 'good' },
-    { title: 'MFA Coverage', value: '97.2%', trend: 1.8, status: 'good' },
-    { title: 'Privileged Users', value: 142, trend: 0, status: 'warning' },
-    { title: 'Inactive Users', value: 891, trend: -4.1, status: 'warning' },
-    { title: 'Guest Users', value: '3,214', trend: 14.2, status: 'neutral' },
-    { title: 'License Utilization', value: '88.4%', trend: -2.1, status: 'warning' },
-    { title: 'Identity Issues', value: 214, trend: -8.3, status: 'good' },
+    { title: 'Total Identities', value: '12,482', trend: 2.8, status: 'neutral', history: this.generateTrendData(12000, 12482) },
+    { title: 'Risky Identities', value: 34, trend: -12.4, status: 'good', history: this.generateTrendData(45, 34) },
+    { title: 'MFA Coverage', value: '97.2%', trend: 1.8, status: 'good', history: this.generateTrendData(93, 97.2) },
+    { title: 'Privileged Users', value: 142, trend: 0, status: 'warning', history: this.generateTrendData(142, 142, 5) },
+    { title: 'Inactive Users', value: 891, trend: -4.1, status: 'warning', history: this.generateTrendData(940, 891) },
+    { title: 'Guest Users', value: '3,214', trend: 14.2, status: 'neutral', history: this.generateTrendData(2800, 3214) },
+    { title: 'License Utilization', value: '88.4%', trend: -2.1, status: 'warning', history: this.generateTrendData(92, 88.4) },
+    { title: 'Identity Issues', value: 214, trend: -8.3, status: 'good', history: this.generateTrendData(250, 214) },
   ];
 
   insights: Insight[] = [

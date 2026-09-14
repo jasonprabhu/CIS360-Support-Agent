@@ -1,8 +1,17 @@
 import { useIdentityData } from '../../../services/identityIntelligence/IdentityDataProvider';
+import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const KPIGrid = () => {
   const { data } = useIdentityData();
   const { kpis } = data;
+
+  
+  const getTrendColor = (status?: string) => {
+    if (status === 'good') return '#16a34a'; // green-600
+    if (status === 'warning') return '#ca8a04'; // yellow-600
+    if (status === 'critical') return '#dc2626'; // red-600
+    return '#6366f1'; // indigo-500 (neutral)
+  };
 
   const renderTrend = (trend: number, status?: string) => {
     let color = 'text-gray-500';
@@ -24,9 +33,28 @@ const KPIGrid = () => {
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             </div>
           </div>
+          
           <div>
             <div className="text-2xl font-bold text-gray-900 mb-1">{kpi.value}</div>
+            
+            {kpi.history && (
+              <div className="h-10 w-full mt-1 mb-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={kpi.history.map((val, i) => ({ value: val, index: i }))}>
+                    <defs>
+                      <linearGradient id={`color-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={getTrendColor(kpi.status)} stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor={getTrendColor(kpi.status)} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="value" stroke={getTrendColor(kpi.status)} fillOpacity={1} fill={`url(#color-${idx})`} strokeWidth={2} isAnimationActive={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
             <div className="flex items-center gap-1.5 mt-1 text-gray-500 text-xs">
+
               {renderTrend(kpi.trend, kpi.status)}
               <span>vs prev 30d</span>
             </div>

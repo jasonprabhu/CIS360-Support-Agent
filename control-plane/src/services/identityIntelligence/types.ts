@@ -21,6 +21,7 @@ export interface KPI {
   value: string | number;
   trend: number; // positive = up, negative = down
   status?: 'good' | 'warning' | 'critical' | 'neutral';
+  history?: number[];
 }
 
 export interface Insight {
