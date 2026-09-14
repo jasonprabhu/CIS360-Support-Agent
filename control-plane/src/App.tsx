@@ -4,6 +4,13 @@ import LicenseIntelligence from './pages/LicenseIntelligence';
 import AppEstateIntelligence from './pages/AppEstateIntelligence';
 import WorkforceIntelligence from './pages/WorkforceIntelligence';
 import MyWorkdayTab from './pages/MyWorkdayTab';
+import MasterDashboard from './pages/MasterDashboard';
+import IdentityIntelligence from './pages/IdentityIntelligence';
+import ExchangeIntelligence from './pages/ExchangeIntelligence';
+import SharePointIntelligence from './pages/SharePointIntelligence';
+import TeamsIntelligence from './pages/TeamsIntelligence';
+import TeamsVoiceIntelligence from './pages/TeamsVoiceIntelligence';
+import PowerPlatformIntelligence from './pages/PowerPlatformIntelligence';
 import './index.css';
 
 // Placeholder Pages
@@ -573,7 +580,13 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview': return <Overview />;
+      case 'master-dashboard': return <MasterDashboard />;
+      case 'identity-intelligence': return <IdentityIntelligence />;
+      case 'exchange-intelligence': return <ExchangeIntelligence />;
+      case 'sharepoint-intelligence': return <SharePointIntelligence />;
+      case 'teams-intelligence': return <TeamsIntelligence />;
+      case 'teams-voice-intelligence': return <TeamsVoiceIntelligence />;
+      case 'power-platform-intelligence': return <PowerPlatformIntelligence />;
       case 'license-intelligence': return <LicenseIntelligence />;
       case 'app-estate-intelligence': return <AppEstateIntelligence />;
       case 'workforce-intelligence': return <WorkforceIntelligence />;
@@ -627,6 +640,41 @@ function App() {
             
             <li className="nav-header" style={{ padding: '16px 20px 8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
               Workplace Intelligence
+            </li>
+
+            <li className={`nav-item ${activeTab === 'master-dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('master-dashboard')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+              Master Dashboard
+            </li>
+            
+            <li className={`nav-item ${activeTab === 'identity-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('identity-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>
+              Identity Intelligence
+            </li>
+
+            <li className={`nav-item ${activeTab === 'exchange-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('exchange-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              Exchange Intelligence
+            </li>
+
+            <li className={`nav-item ${activeTab === 'sharepoint-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('sharepoint-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              SharePoint & OneDrive
+            </li>
+
+            <li className={`nav-item ${activeTab === 'teams-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('teams-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              Teams Intelligence
+            </li>
+
+            <li className={`nav-item ${activeTab === 'teams-voice-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('teams-voice-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+              Teams Voice Intelligence
+            </li>
+
+            <li className={`nav-item ${activeTab === 'power-platform-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('power-platform-intelligence')}>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              Power Platform Intelligence
             </li>
 
             <li className={`nav-item ${activeTab === 'license-intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('license-intelligence')}>
