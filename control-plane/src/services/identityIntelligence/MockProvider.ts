@@ -65,9 +65,59 @@ export class MockIdentityDataProvider implements IIdentityDataProvider {
     { id: '3', userId: 'u3', userName: 'Service-CRM', issue: 'Excessive privileges', risk: 'High', impact: 'Security', ageDays: 12, recommendedAction: 'Review permissions' },
     { id: '4', userId: 'u4', userName: 'Sarah Jenkins', issue: 'Multiple failed sign-ins', risk: 'Medium', impact: 'Security', ageDays: 1, recommendedAction: 'Investigate' },
     { id: '5', userId: 'u5', userName: 'David Chen', issue: 'Unused E5 license', risk: 'Low', impact: 'Cost', ageDays: 62, recommendedAction: 'Downgrade license' },
+    { id: '6', userId: 'u6', userName: 'Maria Garcia', issue: 'Login from new country', risk: 'High', impact: 'Security', ageDays: 0, recommendedAction: 'Block sign-in' },
+    { id: '7', userId: 'u7', userName: 'Alex Johnson', issue: 'Unmanaged device access', risk: 'Medium', impact: 'Compliance', ageDays: 3, recommendedAction: 'Enforce Intune' },
+    { id: '8', userId: 'u8', userName: 'Priya Patel', issue: 'Orphaned guest account', risk: 'Low', impact: 'Hygiene', ageDays: 120, recommendedAction: 'Remove guest' },
   ];
 
   users: IdentityUser[] = [];
+
+  riskTrend: RiskMetric[] = Array.from({ length: 14 }).map((_, i) => ({
+    date: new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    high: Math.floor(Math.random() * 10) + 5,
+    medium: Math.floor(Math.random() * 20) + 15,
+    low: Math.floor(Math.random() * 40) + 30
+  }));
+
+  riskDistribution: RiskDistribution[] = [
+    { category: 'Authentication', count: 42 },
+    { category: 'Location', count: 28 },
+    { category: 'Device', count: 19 },
+    { category: 'Privilege', count: 12 },
+    { category: 'Lifecycle', count: 8 }
+  ];
+
+  lifecycleMetrics: LifecycleMetrics = {
+    newJoiners: 24,
+    departures: 8,
+    dormant: 42,
+    avgOnboardingDays: 2.4
+  };
+
+  licenseMetrics: LicenseMetrics = {
+    purchased: 1000,
+    assigned: 942,
+    active: 781,
+    underUtilized: 91,
+    unused: 67,
+    avoidableCost: '₹3.8L'
+  };
+
+  experienceScore: ExperienceScore = {
+    overall: 91,
+    byDepartment: [
+      { name: 'Finance', score: 96 },
+      { name: 'HR', score: 94 },
+      { name: 'Engineering', score: 92 },
+      { name: 'Sales', score: 88 },
+      { name: 'Operations', score: 81 }
+    ],
+    ticketTrend: Array.from({ length: 14 }).map((_, i) => ({
+      date: new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      tickets: Math.floor(Math.random() * 15) + 5
+    }))
+  };
+
 
   constructor() {
     this.generateUsers();

@@ -56,6 +56,41 @@ export interface IdentityUser {
   licenses: string[];
 }
 
+
+export interface RiskMetric {
+  date: string;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface RiskDistribution {
+  category: string;
+  count: number;
+}
+
+export interface LifecycleMetrics {
+  newJoiners: number;
+  departures: number;
+  dormant: number;
+  avgOnboardingDays: number;
+}
+
+export interface LicenseMetrics {
+  purchased: number;
+  assigned: number;
+  active: number;
+  unused: number;
+  underUtilized: number;
+  avoidableCost: string;
+}
+
+export interface ExperienceScore {
+  overall: number;
+  byDepartment: { name: string; score: number }[];
+  ticketTrend: { date: string; tickets: number }[];
+}
+
 export interface IIdentityDataProvider {
   isConfigured: boolean;
   healthScore: IdentityHealthScore;
@@ -63,5 +98,11 @@ export interface IIdentityDataProvider {
   insights: Insight[];
   issues: IdentityIssue[];
   users: IdentityUser[];
+  
+  riskTrend: RiskMetric[];
+  riskDistribution: RiskDistribution[];
+  lifecycleMetrics: LifecycleMetrics;
+  licenseMetrics: LicenseMetrics;
+  experienceScore: ExperienceScore;
   refreshData: () => Promise<void>;
 }

@@ -12,6 +12,11 @@ export class ProductionIdentityDataProvider implements IIdentityDataProvider {
   insights: Insight[] = [];
   issues: IdentityIssue[] = [];
   users: IdentityUser[] = [];
+  riskTrend: any[] = [];
+  riskDistribution: any[] = [];
+  lifecycleMetrics: any = { newJoiners: 0, departures: 0, dormant: 0, avgOnboardingDays: 0 };
+  licenseMetrics: any = { purchased: 0, assigned: 0, active: 0, unused: 0, underUtilized: 0, avoidableCost: '₹0' };
+  experienceScore: any = { overall: 0, byDepartment: [], ticketTrend: [] };
 
   async refreshData() {
     if (!this.isConfigured) {
