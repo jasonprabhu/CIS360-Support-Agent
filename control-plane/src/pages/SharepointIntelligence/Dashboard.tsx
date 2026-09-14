@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSharePointData } from '../../services/sharepointIntelligence/SharePointDataProvider';
 import HeroHeader from './components/HeroHeader';
 import AskCIS360 from './components/AskCIS360';
@@ -12,9 +13,13 @@ import SharingIntelligence from './components/SharingIntelligence';
 import WhoHasAccess from './components/WhoHasAccess';
 import ContentRiskGovernance from './components/ContentRiskGovernance';
 import LifecycleIntelligence from './components/LifecycleIntelligence';
+import SupportIntelligence from './components/SupportIntelligence';
+import RootCauseAI from './components/RootCauseAI';
+import SharePoint360Modal from './components/SharePoint360Modal';
 
 const Dashboard = () => {
   const { data, isMockMode } = useSharePointData();
+  const [drilldown, setDrilldown] = useState<any>(null);
 
   if (!isMockMode && !data.isConfigured) {
     return (
@@ -34,7 +39,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="animate-fade-in p-6 space-y-8 bg-gray-50/30 min-h-screen">
+    <div className="animate-fade-in p-6 space-y-8 bg-gray-50/30 min-h-screen relative">
       <HeroHeader />
       
       <section>
@@ -50,6 +55,7 @@ const Dashboard = () => {
       </section>
 
       <section className="pt-4 pb-12 border-b border-gray-200">
+        {/* We would normally pass setDrilldown into ContentIntelligence, but didn't update it to accept props in Phase 2 for simplicity. */}
         <ContentIntelligence />
       </section>
 
@@ -85,10 +91,15 @@ const Dashboard = () => {
         <LifecycleIntelligence />
       </section>
 
-      {/* Placeholders for Phase 5+ */}
-      <section className="py-12 text-center text-gray-400">
-        <p>Support Intelligence & AI Root Cause modules will load here...</p>
+      <section className="pt-4">
+        <SupportIntelligence onDrilldown={(payload) => setDrilldown(payload)} />
       </section>
+
+      <section className="pt-4 pb-12">
+        <RootCauseAI onDrilldown={(payload) => setDrilldown(payload)} />
+      </section>
+
+      <SharePoint360Modal isOpen={!!drilldown} onClose={() => setDrilldown(null)} payload={drilldown} />
     </div>
   );
 };

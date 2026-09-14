@@ -1,19 +1,9 @@
-import type { ISharePointDataProvider, KPI, Insight, HealthScore, ContentActivityData, Site, StorageWaste, StorageHotspot, AccessNode, GovernanceCompliance, LifecycleAging } from './types';
+import type { ISharePointDataProvider, KPI, Insight, HealthScore, ContentActivityData, Site, StorageWaste, StorageHotspot, AccessNode, GovernanceCompliance, LifecycleAging, SupportHotspot, ProblemUser, RootCauseNode } from './types';
 
 export class MockSharePointDataProvider implements ISharePointDataProvider {
   isConfigured = true;
 
-  healthScore: HealthScore = {
-    overall: 84,
-    explanation: 'Content health improved 4.1% this month. Sharing risk decreased, but 37 inactive SharePoint sites and 214 externally shared files require attention.',
-    dimensions: [
-      { name: 'Security', score: 91, trend: 2.1 },
-      { name: 'Collaboration', score: 87, trend: 1.4 },
-      { name: 'Governance', score: 76, trend: -3.2 },
-      { name: 'Storage Efficiency', score: 81, trend: 4.5 },
-      { name: 'User Experience', score: 85, trend: 1.1 },
-    ]
-  };
+  healthScore: HealthScore = { overall: 84, explanation: 'Content health improved 4.1% this month. Sharing risk decreased, but 37 inactive SharePoint sites and 214 externally shared files require attention.', dimensions: [ { name: 'Security', score: 91, trend: 2.1 }, { name: 'Collaboration', score: 87, trend: 1.4 }, { name: 'Governance', score: 76, trend: -3.2 }, { name: 'Storage Efficiency', score: 81, trend: 4.5 }, { name: 'User Experience', score: 85, trend: 1.1 } ] };
 
   kpis: KPI[] = [
     { id: '1', category: 'Content', title: 'Total SharePoint Sites', value: '1,284', trend: 3.2, status: 'neutral' },
@@ -36,11 +26,7 @@ export class MockSharePointDataProvider implements ISharePointDataProvider {
   ];
 
   contentActivity: ContentActivityData[] = Array.from({ length: 14 }).map((_, i) => ({
-    date: new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    viewed: Math.floor(Math.random() * 50000) + 100000,
-    modified: Math.floor(Math.random() * 15000) + 20000,
-    shared: Math.floor(Math.random() * 2000) + 1000,
-    deleted: Math.floor(Math.random() * 500) + 100,
+    date: new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), viewed: Math.floor(Math.random() * 50000) + 100000, modified: Math.floor(Math.random() * 15000) + 20000, shared: Math.floor(Math.random() * 2000) + 1000, deleted: Math.floor(Math.random() * 500) + 100,
   }));
 
   sites: Site[] = [
@@ -51,63 +37,32 @@ export class MockSharePointDataProvider implements ISharePointDataProvider {
     { id: 's5', name: 'Marketing Assets', owner: 'diana.prince@company.com', activity: 'Medium', storageGB: 5800, externalSharing: true, health: 79, issues: 2 },
   ];
 
-  oneDriveDistribution = [
-    { range: '<10 GB', count: 1840 },
-    { range: '10–50 GB', count: 950 },
-    { range: '50–100 GB', count: 420 },
-    { range: '100–500 GB', count: 180 },
-    { range: '> 500 GB', count: 30 },
+  oneDriveDistribution = [ { range: '<10 GB', count: 1840 }, { range: '10–50 GB', count: 950 }, { range: '50–100 GB', count: 420 }, { range: '100–500 GB', count: 180 }, { range: '> 500 GB', count: 30 } ];
+  storageWaste: StorageWaste[] = [ { category: 'Inactive content', tb: 7.4 }, { category: 'Large unused files', tb: 3.1 }, { category: 'Abandoned sites', tb: 1.6 }, { category: 'Duplicate content', tb: 0.7 } ];
+  storageHotspots: StorageHotspot[] = [ { name: 'Marketing Assets', type: 'Site', sizeGB: 5800, growthPercent: 12.4, lastActivity: 'Today' }, { name: 'Engineering Specs', type: 'Site', sizeGB: 3420, growthPercent: 4.1, lastActivity: 'Today' }, { name: 'Finance Portal', type: 'Site', sizeGB: 1840, growthPercent: 18.2, lastActivity: 'Today' }, { name: 'Anita Borg (ODFB)', type: 'OneDrive', sizeGB: 840, growthPercent: 24.1, lastActivity: '2 days ago' }, { name: 'Project Phoenix', type: 'Site', sizeGB: 1200, growthPercent: 0, lastActivity: '7 months ago' } ];
+  sharingMetrics = { anonymous: 412, specificExternal: 1240, guest: 829, internal: 14200 };
+  accessPath: AccessNode[] = [ { name: 'John Doe', type: 'User' }, { name: 'Finance Security Group', type: 'Group' }, { name: 'Finance Portal', type: 'Site' }, { name: 'Budget Folder', type: 'Folder' }, { name: 'FY2026.xlsx', type: 'File', role: 'Contributor' } ];
+  governance: GovernanceCompliance = { overall: 81, ownership: 88, sharing: 79, lifecycle: 76, permissions: 82, storage: 91 };
+  lifecycleAging: LifecycleAging[] = [ { range: '0–30 days', tb: 12.4 }, { range: '31–90 days', tb: 18.1 }, { range: '91–180 days', tb: 24.5 }, { range: '181–365 days', tb: 14.2 }, { range: '1–3 years', tb: 8.4 }, { range: '3+ years', tb: 6.6 } ];
+
+  supportHotspots: SupportHotspot[] = [
+    { siteName: 'Finance Portal', tickets: 42, trend: 68 },
+    { siteName: 'HR Documents', tickets: 27, trend: 41 },
+    { siteName: 'Project Phoenix', tickets: 19, trend: 23 },
   ];
 
-  storageWaste: StorageWaste[] = [
-    { category: 'Inactive content', tb: 7.4 },
-    { category: 'Large unused files', tb: 3.1 },
-    { category: 'Abandoned sites', tb: 1.6 },
-    { category: 'Duplicate content', tb: 0.7 },
+  problemUsers: ProblemUser[] = [
+    { name: 'John Smith', issue: 'OneDrive Sync', occurrences: 7, lastIncident: 'Today', cause: 'Client configuration' },
+    { name: 'Sarah Connor', issue: 'File Access Denied', occurrences: 4, lastIncident: 'Yesterday', cause: 'Missing Group Membership' },
+    { name: 'Mike Ross', issue: 'External Sharing Blocked', occurrences: 3, lastIncident: '2 days ago', cause: 'DLP Policy Violation' },
   ];
 
-  storageHotspots: StorageHotspot[] = [
-    { name: 'Marketing Assets', type: 'Site', sizeGB: 5800, growthPercent: 12.4, lastActivity: 'Today' },
-    { name: 'Engineering Specs', type: 'Site', sizeGB: 3420, growthPercent: 4.1, lastActivity: 'Today' },
-    { name: 'Finance Portal', type: 'Site', sizeGB: 1840, growthPercent: 18.2, lastActivity: 'Today' },
-    { name: 'Anita Borg (ODFB)', type: 'OneDrive', sizeGB: 840, growthPercent: 24.1, lastActivity: '2 days ago' },
-    { name: 'Project Phoenix', type: 'Site', sizeGB: 1200, growthPercent: 0, lastActivity: '7 months ago' },
+  rootCauseTimeline: RootCauseNode[] = [
+    { type: 'change', title: 'Permission Change', description: 'User removed from Finance Contributors group by IAM system.' },
+    { type: 'failure', title: 'Access Failures', description: 'Multiple 403 Forbidden errors recorded in M365 audit logs.' },
+    { type: 'ticket', title: 'Support Tickets', description: '7 identical tickets filed for "Cannot access Finance Budget".' },
+    { type: 'impact', title: 'Affected Users', description: 'Group membership change impacted 14 users in total.' },
   ];
 
-  sharingMetrics = {
-    anonymous: 412,
-    specificExternal: 1240,
-    guest: 829,
-    internal: 14200
-  };
-
-  accessPath: AccessNode[] = [
-    { name: 'John Doe', type: 'User' },
-    { name: 'Finance Security Group', type: 'Group' },
-    { name: 'Finance Portal', type: 'Site' },
-    { name: 'Budget Folder', type: 'Folder' },
-    { name: 'FY2026.xlsx', type: 'File', role: 'Contributor' }
-  ];
-
-  governance: GovernanceCompliance = {
-    overall: 81,
-    ownership: 88,
-    sharing: 79,
-    lifecycle: 76,
-    permissions: 82,
-    storage: 91
-  };
-
-  lifecycleAging: LifecycleAging[] = [
-    { range: '0–30 days', tb: 12.4 },
-    { range: '31–90 days', tb: 18.1 },
-    { range: '91–180 days', tb: 24.5 },
-    { range: '181–365 days', tb: 14.2 },
-    { range: '1–3 years', tb: 8.4 },
-    { range: '3+ years', tb: 6.6 }
-  ];
-
-  async refreshData() {
-    return new Promise<void>(resolve => setTimeout(resolve, 800));
-  }
+  async refreshData() { return new Promise<void>(resolve => setTimeout(resolve, 800)); }
 }
