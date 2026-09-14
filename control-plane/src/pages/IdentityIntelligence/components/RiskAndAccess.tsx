@@ -55,7 +55,7 @@ const RiskAndAccess = () => {
                 <YAxis dataKey="category" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
                 <Tooltip cursor={{ fill: '#f3f4f6' }} />
                 <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {riskDistribution.map((entry, index) => (
+                  {riskDistribution.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>

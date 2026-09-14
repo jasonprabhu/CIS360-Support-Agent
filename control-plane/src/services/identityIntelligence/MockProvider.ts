@@ -1,4 +1,4 @@
-import type { IIdentityDataProvider, IdentityHealthScore, KPI, Insight, IdentityIssue, IdentityUser } from './types';
+import type { IIdentityDataProvider, IdentityHealthScore, KPI, Insight, IdentityIssue, IdentityUser, RiskMetric, RiskDistribution, LifecycleMetrics, LicenseMetrics, ExperienceScore } from './types';
 
 // Deterministic random generator for consistent mock data
 const seededRandom = (seed: number) => {

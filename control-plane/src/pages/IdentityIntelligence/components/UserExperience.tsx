@@ -1,5 +1,5 @@
 import { useIdentityData } from '../../../services/identityIntelligence/IdentityDataProvider';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const UserExperience = () => {
   const { data } = useIdentityData();
