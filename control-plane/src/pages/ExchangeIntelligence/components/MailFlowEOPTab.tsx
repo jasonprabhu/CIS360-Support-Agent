@@ -1,7 +1,7 @@
 import { useExchangeData } from '../../../services/exchangeIntelligence/ExchangeDataProvider';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-const MailFlowEOPTab = () => {
+const MailFlowEOPTab = ({ onDrilldown }: { onDrilldown?: (payload: any) => void }) => {
   const { data } = useExchangeData();
   const { eopMetrics, appMailboxes } = data;
 
@@ -84,7 +84,7 @@ const MailFlowEOPTab = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-indigo-600 font-medium hover:text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-md hover:bg-indigo-100 transition-colors">
+                    <button onClick={() => onDrilldown && onDrilldown({ type: 'appMailbox', data: mbx })} className="text-indigo-600 font-medium hover:text-indigo-900 bg-indigo-50 px-3 py-1.5 rounded-md hover:bg-indigo-100 transition-colors">
                       Investigate
                     </button>
                   </td>

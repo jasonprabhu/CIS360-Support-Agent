@@ -1,6 +1,6 @@
 import { useExchangeData } from '../../../services/exchangeIntelligence/ExchangeDataProvider';
 
-const AIInsights = () => {
+const AIInsights = ({ onDrilldown }: { onDrilldown?: (payload: any) => void }) => {
   const { data } = useExchangeData();
   const { insights } = data;
 
@@ -31,7 +31,7 @@ const AIInsights = () => {
               <p className="text-sm font-medium mb-3">{insight.message}</p>
             </div>
             <div className="flex gap-2 mt-2">
-              <button className="text-xs font-semibold bg-white/60 hover:bg-white px-3 py-1.5 rounded transition-colors border border-transparent hover:border-gray-200 flex-1">
+              <button onClick={() => onDrilldown && onDrilldown({ type: 'insight', data: insight })} className="text-xs font-semibold bg-white/60 hover:bg-white px-3 py-1.5 rounded transition-colors border border-transparent hover:border-gray-200 flex-1">
                 Investigate
               </button>
             </div>

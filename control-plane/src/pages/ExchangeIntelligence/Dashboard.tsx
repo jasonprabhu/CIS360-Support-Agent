@@ -6,10 +6,12 @@ import StorageArchiveTab from './components/StorageArchiveTab';
 import MailFlowEOPTab from './components/MailFlowEOPTab';
 import SecurityRoutingTab from './components/SecurityRoutingTab';
 import SupportIntelligenceTab from './components/SupportIntelligenceTab';
+import Exchange360Modal from './components/Exchange360Modal';
 
 const Dashboard = () => {
   const { data, isMockMode, isLoading } = useExchangeData();
   const [activeTab, setActiveTab] = useState('overview');
+  const [drilldown, setDrilldown] = useState<any>(null);
 
   const tabs = [
     { id: 'overview', label: 'Hybrid Overview' },
@@ -66,12 +68,13 @@ const Dashboard = () => {
       </div>
 
       <div className="mt-6">
-        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'overview' && <OverviewTab onDrilldown={(payload) => setDrilldown(payload)} />}
         {activeTab === 'storage' && <StorageArchiveTab />}
-        {activeTab === 'mailflow' && <MailFlowEOPTab />}
-        {activeTab === 'security' && <SecurityRoutingTab />}
+        {activeTab === 'mailflow' && <MailFlowEOPTab onDrilldown={(payload) => setDrilldown(payload)} />}
+        {activeTab === 'security' && <SecurityRoutingTab onDrilldown={(payload) => setDrilldown(payload)} />}
         {activeTab === 'support' && <SupportIntelligenceTab />}
       </div>
+      <Exchange360Modal isOpen={!!drilldown} onClose={() => setDrilldown(null)} payload={drilldown} />
     </div>
   );
 };
