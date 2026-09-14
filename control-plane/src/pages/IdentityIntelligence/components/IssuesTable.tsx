@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useIdentityData } from '../../../services/identityIntelligence/IdentityDataProvider';
 
-const IssuesTable = () => {
+interface IssuesTableProps {
+  onDrilldown?: (issue: any) => void;
+}
+
+const IssuesTable = ({ onDrilldown }: IssuesTableProps) => {
   const { data } = useIdentityData();
   const { issues } = data;
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +15,7 @@ const IssuesTable = () => {
     if (risk === 'High') color = 'bg-red-100 text-red-800';
     if (risk === 'Medium') color = 'bg-orange-100 text-orange-800';
     if (risk === 'Low') color = 'bg-green-100 text-green-800';
-    return <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>{risk}</span>;
+    return <span className={\`px-2.5 py-0.5 rounded-full text-xs font-medium \${color}\`}>{risk}</span>;
   };
 
   const filteredIssues = issues.filter(issue => 
@@ -58,7 +62,11 @@ const IssuesTable = () => {
           </thead>
           <tbody>
             {filteredIssues.map((issue) => (
-              <tr key={issue.id} className="bg-white border-b hover:bg-gray-50 transition-colors cursor-pointer group">
+              <tr 
+                key={issue.id} 
+                onClick={() => onDrilldown && onDrilldown(issue)}
+                className="bg-white border-b hover:bg-gray-50 transition-colors cursor-pointer group"
+              >
                 <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
                     {issue.userName.charAt(0)}

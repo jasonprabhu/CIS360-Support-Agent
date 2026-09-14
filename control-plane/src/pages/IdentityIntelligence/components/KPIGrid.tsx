@@ -1,7 +1,11 @@
 import { useIdentityData } from '../../../services/identityIntelligence/IdentityDataProvider';
 import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 
-const KPIGrid = () => {
+interface KPIGridProps {
+  onDrilldown?: (kpi: any) => void;
+}
+
+const KPIGrid = ({ onDrilldown }: KPIGridProps) => {
   const { data } = useIdentityData();
   const { kpis } = data;
 
@@ -19,13 +23,17 @@ const KPIGrid = () => {
     if (status === 'critical') color = 'text-red-600';
 
     const dir = trend > 0 ? '↑' : (trend < 0 ? '↓' : '-');
-    return <span className={`text-xs font-semibold ${color}`}>{dir} {Math.abs(trend)}%</span>;
+    return <span className={\`text-xs font-semibold \${color}\`}>{dir} {Math.abs(trend)}%</span>;
   };
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-full">
       {kpis.map((kpi, idx) => (
-        <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col hover:shadow-md transition-shadow cursor-pointer h-full">
+        <div 
+          key={idx} 
+          onClick={() => onDrilldown && onDrilldown(kpi)}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col hover:shadow-md transition-shadow cursor-pointer h-full"
+        >
           {/* Top: Title & Icon */}
           <div className="flex justify-between items-start mb-1">
             <h4 className="text-sm font-medium text-gray-500">{kpi.title}</h4>
@@ -43,12 +51,12 @@ const KPIGrid = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={kpi.history.map((val, i) => ({ value: val, index: i }))} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id={`color-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={\`color-\${idx}\`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={getTrendColor(kpi.status)} stopOpacity={0.25}/>
                       <stop offset="95%" stopColor={getTrendColor(kpi.status)} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="value" stroke={getTrendColor(kpi.status)} fillOpacity={1} fill={`url(#color-${idx})`} strokeWidth={2.5} isAnimationActive={false} />
+                  <Area type="monotone" dataKey="value" stroke={getTrendColor(kpi.status)} fillOpacity={1} fill={\`url(#color-\${idx})\`} strokeWidth={2.5} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             )}

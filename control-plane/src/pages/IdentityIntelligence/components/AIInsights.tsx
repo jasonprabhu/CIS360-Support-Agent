@@ -1,6 +1,10 @@
 import { useIdentityData } from '../../../services/identityIntelligence/IdentityDataProvider';
 
-const AIInsights = () => {
+interface AIInsightsProps {
+  onDrilldown?: (insight: any) => void;
+}
+
+const AIInsights = ({ onDrilldown }: AIInsightsProps) => {
   const { data } = useIdentityData();
   const { insights } = data;
 
@@ -34,7 +38,7 @@ const AIInsights = () => {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {insights.map(insight => (
-          <div key={insight.id} className={`border-l-4 rounded-r-lg p-4 flex flex-col justify-between h-full shadow-sm ${getSeverityStyle(insight.severity)}`}>
+          <div key={insight.id} className={\`border-l-4 rounded-r-lg p-4 flex flex-col justify-between h-full shadow-sm \${getSeverityStyle(insight.severity)}\`}>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider">{getSeverityDot(insight.severity)} {insight.severity}</span>
@@ -45,8 +49,17 @@ const AIInsights = () => {
             <div>
               <p className="text-xs font-semibold opacity-80 mb-3">Impact: {insight.impact}</p>
               <div className="flex gap-2">
-                <button className="text-xs font-semibold bg-white/50 hover:bg-white px-2 py-1.5 rounded transition-colors flex-1 text-center">Investigate</button>
-                <button className="text-xs font-semibold bg-white/50 hover:bg-white px-2 py-1.5 rounded transition-colors flex-1 text-center">Explain</button>
+                <button 
+                  onClick={() => onDrilldown && onDrilldown(insight)}
+                  className="text-xs font-semibold bg-white/50 hover:bg-white px-2 py-1.5 rounded transition-colors flex-1 text-center border border-transparent hover:border-gray-200"
+                >
+                  Investigate
+                </button>
+                <button 
+                  className="text-xs font-semibold bg-white/50 hover:bg-white px-2 py-1.5 rounded transition-colors flex-1 text-center border border-transparent hover:border-gray-200"
+                >
+                  Explain
+                </button>
               </div>
             </div>
           </div>

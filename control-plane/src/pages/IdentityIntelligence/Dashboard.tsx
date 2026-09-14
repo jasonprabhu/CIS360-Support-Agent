@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useIdentityData } from '../../services/identityIntelligence/IdentityDataProvider';
 import HeroHeader from './components/HeroHeader';
 import IdentityHealth from './components/IdentityHealth';
@@ -11,6 +12,15 @@ import Identity360Modal from './components/Identity360Modal';
 
 const Dashboard = () => {
   const { data, isMockMode, isLoading } = useIdentityData();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [drilldown, setDrilldown] = useState<any>(null);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'risk', label: 'Risk & Access' },
+    { id: 'lifecycle', label: 'Lifecycle & License' },
+    { id: 'experience', label: 'User Experience' }
+  ];
 
   if (!isMockMode && !data.isConfigured) {
     return (
@@ -32,43 +42,67 @@ const Dashboard = () => {
   return (
     <div className="animate-fade-in p-6 relative">
       {isLoading && (
-        <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center rounded-xl">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
       )}
       
       <HeroHeader />
       
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <IdentityHealth />
-        </div>
-        <div className="lg:col-span-2">
-          <KPIGrid />
-        </div>
+      {/* Sub-navigation Tabs */}
+      <div className="mt-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={\`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors \${
+                activeTab === tab.id 
+                  ? 'border-indigo-500 text-indigo-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }\`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
       <div className="mt-6">
-        <AIInsights />
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <IdentityHealth />
+              </div>
+              <div className="lg:col-span-2">
+                <KPIGrid onDrilldown={(kpi: any) => setDrilldown({ type: 'kpi', data: kpi })} />
+              </div>
+            </div>
+            <AIInsights onDrilldown={(insight: any) => setDrilldown({ type: 'insight', data: insight })} />
+            <IssuesTable onDrilldown={(issue: any) => setDrilldown({ type: 'issue', data: issue })} />
+          </div>
+        )}
+
+        {activeTab === 'risk' && (
+          <RiskAndAccess />
+        )}
+
+        {activeTab === 'lifecycle' && (
+          <LifecycleAndLicense />
+        )}
+
+        {activeTab === 'experience' && (
+          <UserExperience />
+        )}
       </div>
 
-      <div className="mt-6">
-        <RiskAndAccess />
-      </div>
-
-      <div className="mt-6">
-        <LifecycleAndLicense />
-      </div>
-      
-      <div className="mt-6">
-        <UserExperience />
-      </div>
-
-      <div className="mt-6">
-        <IssuesTable />
-      </div>
-
-      <Identity360Modal />
+      {/* Drill-down Slide-over Panel */}
+      <Identity360Modal 
+        isOpen={!!drilldown} 
+        onClose={() => setDrilldown(null)} 
+        payload={drilldown} 
+      />
     </div>
   );
 };
