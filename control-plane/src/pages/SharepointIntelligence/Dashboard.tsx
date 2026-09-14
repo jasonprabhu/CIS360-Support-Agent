@@ -4,6 +4,10 @@ import AskCIS360 from './components/AskCIS360';
 import ContentHealthScore from './components/ContentHealthScore';
 import ExecutiveKPIs from './components/ExecutiveKPIs';
 import ContentIntelligence from './components/ContentIntelligence';
+import ContentActivity from './components/ContentActivity';
+import SharepointSiteIntelligence from './components/SharepointSiteIntelligence';
+import OneDriveIntelligence from './components/OneDriveIntelligence';
+import StorageIntelligence from './components/StorageIntelligence';
 
 const Dashboard = () => {
   const { data, isMockMode } = useSharePointData();
@@ -45,9 +49,25 @@ const Dashboard = () => {
         <ContentIntelligence />
       </section>
 
-      {/* Placeholders for Phase 3+ */}
+      <section className="pt-4">
+        <ContentActivity />
+      </section>
+
+      <section className="pt-4">
+        <SharepointSiteIntelligence />
+      </section>
+
+      <section className="pt-4">
+        <OneDriveIntelligence />
+      </section>
+
+      <section className="pt-4 pb-12 border-b border-gray-200">
+        <StorageIntelligence />
+      </section>
+
+      {/* Placeholders for Phase 4+ */}
       <section className="py-12 text-center text-gray-400">
-        <p>Activity & Collaboration visualizations will load here...</p>
+        <p>Sharing, Governance, & Support Intelligence modules will load here...</p>
       </section>
     </div>
   );

@@ -29,10 +29,48 @@ export interface Insight {
   recommendedAction: string;
 }
 
+export interface ContentActivityData {
+  date: string;
+  viewed: number;
+  modified: number;
+  shared: number;
+  deleted: number;
+}
+
+export interface Site {
+  id: string;
+  name: string;
+  owner: string;
+  activity: 'High' | 'Medium' | 'Low' | 'Inactive';
+  storageGB: number;
+  externalSharing: boolean;
+  health: number;
+  issues: number;
+  anomaly?: string;
+}
+
+export interface StorageWaste {
+  category: string;
+  tb: number;
+}
+
+export interface StorageHotspot {
+  name: string;
+  type: 'Site' | 'OneDrive';
+  sizeGB: number;
+  growthPercent: number;
+  lastActivity: string;
+}
+
 export interface ISharePointDataProvider {
   isConfigured: boolean;
   healthScore: HealthScore;
   kpis: KPI[];
   insights: Insight[];
+  contentActivity: ContentActivityData[];
+  sites: Site[];
+  oneDriveDistribution: { range: string; count: number }[];
+  storageWaste: StorageWaste[];
+  storageHotspots: StorageHotspot[];
   refreshData: () => Promise<void>;
 }
