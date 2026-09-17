@@ -713,6 +713,17 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       } else if (aiResponse.type === 'general') {
         const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
         await context.sendActivity({ attachments: [card] });
+      } else if (aiResponse.type === 'escalate') {
+        const card = CardBuilder.textResponseCard(
+          'L3 Escalation Required',
+          `I have determined that this issue (${aiResponse.summary}) is related to ${aiResponse.domain}, but it requires an L3 Engineering escalation as there is no direct automation available.\n\nI am routing this to the ${aiResponse.domain} support queue.`,
+          'warning'
+        );
+        await context.sendActivity({ attachments: [card] });
+        
+        // Initiate the human handoff specifically to the relevant domain team
+        await (this as any).initiateHandoff(context, aiResponse.domain);
+        
       } else if (aiResponse.type === 'execute') {
         const ucCode = aiResponse.ucCode.toUpperCase();
         if (!(await this.checkUseCaseEnabled(context, ucCode))) {

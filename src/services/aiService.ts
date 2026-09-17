@@ -20,7 +20,13 @@ export interface AIGeneralResponse {
   text: string;
 }
 
-export type AIResponse = AIExecutionResponse | AIProbeResponse | AIGeneralResponse;
+export interface AIEscalateResponse {
+  type: 'escalate';
+  domain: string;
+  summary: string;
+}
+
+export type AIResponse = AIExecutionResponse | AIProbeResponse | AIGeneralResponse | AIEscalateResponse;
 
 export class AIService {
   private static openaiClient: OpenAI | null = null;
@@ -77,15 +83,30 @@ export class AIService {
           type: 'function',
           function: {
             name: 'execute_m365_task',
-            description: 'Executes an administrative task/use-case when all required parameters are collected.',
+            description: 'Executes an administrative task/use-case when all required parameters are collected and the task perfectly matches a supported automation.',
             parameters: {
               type: 'object',
               properties: {
                 ucCode: { type: 'string', description: 'The use case code (e.g. SUC001) identifying the task.' },
-                actionDescription: { type: 'string', description: 'A short, user-friendly description of what you are about to do. Example: "check your password expiry status"' },
+                actionDescription: { type: 'string', description: 'A short, user-friendly description of what you are about to do.' },
                 parameters: { type: 'object', description: 'Dynamic arguments collected for the specific use case.', additionalProperties: true }
               },
               required: ['ucCode', 'actionDescription', 'parameters']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'escalate_to_support',
+            description: 'Routes the user to Level 3 Human Support. Use this ONLY if the issue is strictly within M365 Scope (Identity, Exchange, SharePoint, ODFB, Teams) BUT there is no exact automation available.',
+            parameters: {
+              type: 'object',
+              properties: {
+                domain: { type: 'string', enum: ['Identity', 'Exchange', 'SharePoint', 'OneDrive', 'Teams', 'Other M365'], description: 'The M365 domain this issue belongs to.' },
+                summary: { type: 'string', description: 'A concise summary of the exact problem.' }
+              },
+              required: ['domain', 'summary']
             }
           }
         }
@@ -130,6 +151,13 @@ Probing Flow:
             ucCode: parsed.ucCode,
             actionDescription: parsed.actionDescription || 'execute task',
             parameters: parsed.parameters
+          };
+        } else if (toolCall.function.name === 'escalate_to_support') {
+          const parsed = JSON.parse(toolCall.function.arguments);
+          return {
+            type: 'escalate',
+            domain: parsed.domain,
+            summary: parsed.summary
           };
         }
       }
