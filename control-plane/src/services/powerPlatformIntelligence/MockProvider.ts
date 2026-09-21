@@ -11,6 +11,13 @@ export const mockPowerPlatformData: PPIntelligenceData = {
     dataverseInstances: 25,
     customConnectors: 261,
     activeMakers: 2041,
+    supportTickets: 180,
+    l2l3Demand: 'High (0.5 FTE)',
+    governanceExceptions: 32,
+    dlpViolations: 14,
+    orphanedAssets: 241,
+    inactiveAssets: 1205,
+    criticalApps: 112,
   },
   growth: Array.from({ length: 12 }).map((_, i) => ({
     date: new Date(2025, i, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),

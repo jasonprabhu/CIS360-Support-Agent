@@ -9,6 +9,13 @@ export interface PPIntelligenceData {
     dataverseInstances: number;
     customConnectors: number;
     activeMakers: number;
+    supportTickets: number;
+    l2l3Demand: string;
+    governanceExceptions: number;
+    dlpViolations: number;
+    orphanedAssets: number;
+    inactiveAssets: number;
+    criticalApps: number;
   };
   growth: { date: string; apps: number; flows: number; makers: number; agents: number; }[];
   estate: { id: string; name: string; type: string; health: string; riskScore: number; }[];
