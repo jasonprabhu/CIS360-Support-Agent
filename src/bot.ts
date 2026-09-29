@@ -1259,6 +1259,16 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           const emailAddress = inputs.emailAddress || inputs.email || `${mailboxName.replace(/\s+/g, '').toLowerCase()}@demo.local`;
           const permissions = inputs.permissions || 'Full Access';
           
+          try {
+            // 1. Create the backend user identity in Entra ID
+            await GraphService.createUser('Shared', mailboxName, emailAddress, 'IT', 'Shared Mailbox', '');
+            
+            // 2. Convert to Shared Mailbox and configure Exchange properties
+            await ExchangeService.createSharedMailbox(mailboxName, emailAddress);
+          } catch (err: any) {
+            throw new Error(`M365 Provisioning Failed: ${err.message}`);
+          }
+
           summaryText = `Successfully provisioned shared mailbox **${mailboxName}** (${emailAddress}).`;
           resultDetails.push({
             title: 'Provisioning Details',
