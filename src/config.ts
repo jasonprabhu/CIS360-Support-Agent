@@ -20,5 +20,6 @@ export const config = {
   m365ClientSecret: process.env.M365_CLIENT_SECRET || '',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-  openaiApiBase: process.env.OPENAI_API_BASE || 'https://api.openai.com/v1'
+  openaiApiBase: process.env.OPENAI_API_BASE || 'https://api.openai.com/v1',
+  exc001ApproverUpn: process.env.EXC001_APPROVER_UPN || ''  // UPN of CIS User001 — set in .env
 };

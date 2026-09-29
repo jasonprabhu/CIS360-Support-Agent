@@ -836,7 +836,8 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       let managerUpn = requestorUser?.managerUpn;
 
       if (ucCode === 'SUC041' || ucCode === 'EXC001') {
-        managerUpn = 'CIS User001';
+        // Route to configured EXC001 approver (CIS User001). Must be a real UPN set in EXC001_APPROVER_UPN env var.
+        managerUpn = config.exc001ApproverUpn || managerUpn;
       }
 
       if (!managerUpn) {
