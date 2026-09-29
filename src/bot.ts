@@ -835,7 +835,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       const requestorUser = await GraphService.getUser(requestorUpn);
       let managerUpn = requestorUser?.managerUpn;
 
-      if (ucCode === 'SUC041') {
+      if (ucCode === 'SUC041' || ucCode === 'EXC001') {
         managerUpn = 'CIS User001';
       }
 
@@ -1249,6 +1249,24 @@ export class CIS360SupportBot extends TeamsActivityHandler {
               { title: 'User', value: upn },
               { title: 'Target Mailbox', value: mailbox },
               { title: 'Permission Level', value: 'Full Access / Send As' }
+            ]
+          });
+          break;
+        }
+
+        case 'EXC001': { // Create Shared Mailbox
+          const mailboxName = inputs.mailboxName || inputs.name || 'New Shared Mailbox';
+          const emailAddress = inputs.emailAddress || inputs.email || `${mailboxName.replace(/\s+/g, '').toLowerCase()}@demo.local`;
+          const permissions = inputs.permissions || 'Full Access';
+          
+          summaryText = `Successfully provisioned shared mailbox **${mailboxName}** (${emailAddress}).`;
+          resultDetails.push({
+            title: 'Provisioning Details',
+            facts: [
+              { title: 'Mailbox Name', value: mailboxName },
+              { title: 'Email Address', value: emailAddress },
+              { title: 'Initial Permissions', value: permissions },
+              { title: 'Status', value: 'Active & Ready' }
             ]
           });
           break;
