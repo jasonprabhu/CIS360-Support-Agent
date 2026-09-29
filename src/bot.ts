@@ -1260,10 +1260,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           const permissions = inputs.permissions || 'Full Access';
           
           try {
-            // 1. Create the backend user identity in Entra ID
-            await GraphService.createUser('Shared', mailboxName, emailAddress, 'IT', 'Shared Mailbox', '');
-            
-            // 2. Convert to Shared Mailbox and configure Exchange properties
+            // Provision the Shared Mailbox directly (ExchangeService handles the underlying identity creation)
             await ExchangeService.createSharedMailbox(mailboxName, emailAddress);
           } catch (err: any) {
             throw new Error(`M365 Provisioning Failed: ${err.message}`);
