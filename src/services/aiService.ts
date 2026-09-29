@@ -215,10 +215,13 @@ Keep your conversational tone extremely professional, intelligent, and empatheti
             summary: parsed.summary
           };
         } else if (toolCall.function.name === 'transition_agent') {
+          StateManager.addMessage(userId, 'assistant', `[System Action: Transitioned to ${parsed.targetAgent}. I am now the ${parsed.targetAgent}. I should ask deeper specialist questions now.]`);
           return { type: 'transition', sourceAgent: parsed.sourceAgent, targetAgent: parsed.targetAgent };
         } else if (toolCall.function.name === 'present_investigation') {
+          StateManager.addMessage(userId, 'assistant', `[System Action: Presented investigation checklist. Finding: ${parsed.finding}. Next I should propose remediation.]`);
           return { type: 'investigation', checks: parsed.checks, finding: parsed.finding };
         } else if (toolCall.function.name === 'propose_remediation') {
+          StateManager.addMessage(userId, 'assistant', `[System Action: Proposed remediation: ${parsed.remediation}. Awaiting user approval.]`);
           return { type: 'remediation', remediation: parsed.remediation, description: parsed.description };
         }
       }
