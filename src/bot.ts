@@ -1255,13 +1255,19 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         }
 
         case 'EXC001': { // Create Shared Mailbox
-          const mailboxName = inputs.mailboxName || inputs.name || 'New Shared Mailbox';
-          const emailAddress = inputs.emailAddress || inputs.email || `${mailboxName.replace(/\s+/g, '').toLowerCase()}@demo.local`;
+          // Log exactly what the LLM sent for debugging
+          console.log('[EXC001] Received inputs:', JSON.stringify(inputs));
+
+          const mailboxName = inputs.mailboxName;
+          const emailAddress = inputs.emailAddress;
           const permissions = inputs.permissions || 'Full Access';
-          
+
+          if (!mailboxName || !emailAddress) {
+            throw new Error(`Missing required parameters. Received: ${JSON.stringify(inputs)}. Expected keys: mailboxName, emailAddress, permissions.`);
+          }
+
           let actualEmail = emailAddress;
           try {
-            // Provision the Shared Mailbox directly (ExchangeService handles the underlying identity creation)
             const created = await ExchangeService.createSharedMailbox(mailboxName, emailAddress);
             if (created && created.userPrincipalName) {
               actualEmail = created.userPrincipalName;
@@ -1276,7 +1282,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
             facts: [
               { title: 'Mailbox Name', value: String(mailboxName) },
               { title: 'Email Address', value: String(actualEmail) },
-              { title: 'Initial Permissions', value: typeof permissions === 'string' ? permissions : JSON.stringify(permissions) },
+              { title: 'Permissions', value: String(permissions) },
               { title: 'Status', value: 'Active & Ready' }
             ]
           });

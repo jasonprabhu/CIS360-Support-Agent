@@ -51,22 +51,15 @@ export class AIService {
 
   private static getClient(): OpenAI | null {
     if (this.openaiClient) return this.openaiClient;
-
-    const hasKey = config.openaiApiKey && 
-                   config.openaiApiKey !== 'your_openai_api_key' && 
-                   config.openaiApiKey !== 'your_openai_api_key_here' && 
+    const hasKey = config.openaiApiKey &&
+                   config.openaiApiKey !== 'your_openai_api_key' &&
+                   config.openaiApiKey !== 'your_openai_api_key_here' &&
                    config.openaiApiKey.trim() !== '';
-
     if (!hasKey) {
       console.log('[AI Service] OpenAI Key is empty. Running in SIMULATED AI mode.');
       return null;
     }
-
-    this.openaiClient = new OpenAI({
-      apiKey: config.openaiApiKey,
-      baseURL: config.openaiApiBase
-    });
-
+    this.openaiClient = new OpenAI({ apiKey: config.openaiApiKey, baseURL: config.openaiApiBase });
     return this.openaiClient;
   }
 
@@ -89,13 +82,23 @@ export class AIService {
           type: 'function',
           function: {
             name: 'execute_m365_task',
-            description: 'Executes an administrative task/use-case when all required parameters are collected and the task perfectly matches a supported automation.',
+            description: 'Executes a supported M365 administrative use-case once all required parameters are confirmed by the user.',
             parameters: {
               type: 'object',
               properties: {
-                ucCode: { type: 'string' },
-                actionDescription: { type: 'string' },
-                parameters: { type: 'object', additionalProperties: true }
+                ucCode: { type: 'string', description: 'The use case code e.g. SUC001, EXC001.' },
+                actionDescription: { type: 'string', description: 'Short user-friendly description of the action.' },
+                parameters: {
+                  type: 'object',
+                  description: 'Collected parameters. For EXC001 MUST use keys: mailboxName, emailAddress, permissions.',
+                  properties: {
+                    mailboxName: { type: 'string', description: 'Display name of the shared mailbox. Required for EXC001.' },
+                    emailAddress: { type: 'string', description: 'Full email address of the shared mailbox. Required for EXC001.' },
+                    permissions: { type: 'string', description: 'Permission level: Full Access, Send As, or Read Only. Required for EXC001.' },
+                    userUpn: { type: 'string', description: 'User UPN for identity-based use cases.' }
+                  },
+                  additionalProperties: true
+                }
               },
               required: ['ucCode', 'actionDescription', 'parameters']
             }
@@ -105,7 +108,7 @@ export class AIService {
           type: 'function',
           function: {
             name: 'escalate_to_support',
-            description: 'Routes the user to Level 3 Human Support.',
+            description: 'Routes the user to Level 3 Human Support for issues outside available automations.',
             parameters: {
               type: 'object',
               properties: {
@@ -120,7 +123,7 @@ export class AIService {
           type: 'function',
           function: {
             name: 'transition_agent',
-            description: 'Visually routes the conversation from a Triage Agent to a Specialist Agent.',
+            description: 'Shows a visual card routing from Triage Agent to a Specialist Agent. Call this AFTER all parameters are collected but BEFORE the specialist confirms them with the user.',
             parameters: {
               type: 'object',
               properties: {
@@ -165,29 +168,53 @@ export class AIService {
 
       const useCaseList = supportUseCases.map(uc => `- ${uc.id}: ${uc.name} (${uc.description})`).join('\n');
 
-      const systemPrompt = `You are CIS360, an advanced AI Support Orchestrator. 
-Your behavior depends on the user's intent.
+      const systemPrompt = `You are CIS360, an advanced AI Support Orchestrator.
+Your behavior depends strictly on the user's intent.
 
-RULE A (Automation Hub): If the user asks for a DIRECT administrative action (like resetting a password), use 'execute_m365_task'. 
-Valid Use Cases:
+=== RULE A: Automation Hub ===
+If the user asks for a DIRECT administrative action (e.g. reset password, unlock account), use the 'execute_m365_task' tool immediately with the correct ucCode.
+Supported Use Cases:
 ${useCaseList}
 
-RULE B (Multi-Agent Troubleshooting Playbook): If the user reports a vague problem (e.g., "my email is not working"), follow this exact multi-turn playbook:
-1. Adopt the "Triage Agent" persona. Ask diagnostic questions one by one (e.g., send/receive? web vs desktop? error messages?).
-2. Once you determine the domain (e.g., Exchange/Outlook), call the 'transition_agent' tool (e.g., source="Triage Agent", target="Exchange & Outlook Specialist Agent").
-3. Immediately adopt the "Exchange & Outlook Specialist" persona. Probe deeper (e.g., authentication loops, other M365 apps, recent password changes).
-4. When you have enough information, say "I have enough information to begin the technical investigation. Investigation in progress..." as conversational text. DO NOT CALL TOOLS YET.
-5. In the VERY NEXT user turn (or immediately if you can), call 'present_investigation' with the checklist of what you found.
-6. If the user acknowledges the investigation or if you choose to bundle it, call 'propose_remediation' (e.g., remediation="Refresh Outlook Session & Revoke Tokens").
+=== RULE B: Troubleshooting Playbook ===
+If the user reports a vague problem (e.g. "my email is not working"):
+1. As "Triage Agent": ask diagnostic questions (send/receive? web vs desktop? error messages?).
+2. Once domain is identified, call 'transition_agent' (sourceAgent="Triage Agent", targetAgent="Exchange & Outlook Specialist Agent").
+3. As "Exchange & Outlook Specialist": probe deeper.
+4. Call 'present_investigation' with your findings.
+5. Call 'propose_remediation' with your recommended fix.
 
-RULE C (Shared Mailbox Playbook for EXC001): If the user wants to create a shared mailbox:
-1. Adopt the "Triage Agent" persona. You MUST probe and successfully collect all three of these parameters from the user first: 1. Name of the mailbox, 2. Email Address, 3. Permissions to be added. DO NOT proceed until you have asked for and received all three.
-2. ONLY after you have obtained the Name, Email, and Permissions, call the 'transition_agent' tool (source="Triage Agent", target="Exchange & Outlook Specialist Agent"). Do NOT call this early.
-3. As the Specialist Agent, re-confirm the collected information with the user via a conversational message. DO NOT CALL execute_m365_task YET.
-4. Once the user explicitly confirms the details are correct, call the 'execute_m365_task' tool with ucCode="EXC001", actionDescription="Provision Shared Mailbox", and the collected parameters.
+=== RULE C: Create Shared Mailbox (EXC001) ===
+If the user wants to CREATE a shared mailbox, follow these EXACT steps IN ORDER. Do not skip any step.
 
-IMPORTANT: You can only call ONE tool per turn in this setup.
-Keep your conversational tone extremely professional, intelligent, and empathetic. Do NOT break character.`;
+STEP 1 — As "Triage Agent", collect ALL THREE of these details from the user (ask them one by one if not provided):
+  - Mailbox display name
+  - Full email address (must include the domain, e.g. sales@company.com)
+  - Permission level (Full Access / Send As / Read Only)
+  Do NOT advance to Step 2 until you have received all three answers.
+
+STEP 2 — IMMEDIATELY after collecting all three details, call the 'transition_agent' tool:
+  sourceAgent = "Triage Agent"
+  targetAgent = "Exchange & Outlook Specialist Agent"
+  This visual routing card is mandatory. Do NOT skip this step and go straight to confirmation.
+
+STEP 3 — As "Exchange & Outlook Specialist Agent", send a confirmation message listing the three collected values. Ask the user to reply "Confirm" or "Yes" to proceed.
+  Do NOT call execute_m365_task yet.
+
+STEP 4 — Once the user confirms, call 'execute_m365_task' with EXACTLY these values:
+  ucCode = "EXC001"
+  actionDescription = "Create Shared Mailbox"
+  parameters = {
+    "mailboxName": "<the display name collected in Step 1>",
+    "emailAddress": "<the email address collected in Step 1>",
+    "permissions": "<the permission level collected in Step 1>"
+  }
+  CRITICAL: The three parameter keys must be EXACTLY "mailboxName", "emailAddress", and "permissions". Do not use any other key names.
+
+=== GENERAL RULES ===
+- You may only call ONE tool per turn.
+- Always complete the current step fully before moving to the next.
+- Maintain a professional, intelligent, and empathetic tone throughout.`;
 
       const response = await client.chat.completions.create({
         model: config.openaiModel,
@@ -205,8 +232,9 @@ Keep your conversational tone extremely professional, intelligent, and empatheti
       if (message.tool_calls && message.tool_calls.length > 0) {
         const toolCall = message.tool_calls[0];
         const parsed = JSON.parse(toolCall.function.arguments);
-        
+
         if (toolCall.function.name === 'execute_m365_task') {
+          console.log('[AI Service] execute_m365_task called. ucCode:', parsed.ucCode, 'parameters:', JSON.stringify(parsed.parameters));
           return {
             type: 'execute',
             ucCode: parsed.ucCode,
@@ -214,13 +242,9 @@ Keep your conversational tone extremely professional, intelligent, and empatheti
             parameters: parsed.parameters
           };
         } else if (toolCall.function.name === 'escalate_to_support') {
-          return {
-            type: 'escalate',
-            domain: parsed.domain,
-            summary: parsed.summary
-          };
+          return { type: 'escalate', domain: parsed.domain, summary: parsed.summary };
         } else if (toolCall.function.name === 'transition_agent') {
-          StateManager.addMessage(userId, 'assistant', `[System Action: Transitioned to ${parsed.targetAgent}. I am now the ${parsed.targetAgent}. I should ask deeper specialist questions now.]`);
+          StateManager.addMessage(userId, 'assistant', `[System Action: Transitioned to ${parsed.targetAgent}. I am now the ${parsed.targetAgent}. I should confirm collected details with the user next.]`);
           return { type: 'transition', sourceAgent: parsed.sourceAgent, targetAgent: parsed.targetAgent };
         } else if (toolCall.function.name === 'present_investigation') {
           StateManager.addMessage(userId, 'assistant', `[System Action: Presented investigation checklist. Finding: ${parsed.finding}. Next I should propose remediation.]`);
@@ -233,10 +257,7 @@ Keep your conversational tone extremely professional, intelligent, and empatheti
 
       const replyText = message.content || 'I need more information to process this request.';
       StateManager.addMessage(userId, 'assistant', replyText);
-      return {
-        type: 'probe',
-        text: replyText
-      };
+      return { type: 'probe', text: replyText };
 
     } catch (err: any) {
       console.error('[AI Service Error]', err.message);
@@ -245,10 +266,6 @@ Keep your conversational tone extremely professional, intelligent, and empatheti
   }
 
   private static async simulateAIIntent(text: string, history: ChatMessage[]): Promise<AIResponse> {
-    const cleanText = text.toLowerCase().trim();
-    if (cleanText.includes('suc')) {
-      return { type: 'probe', text: `Opening form.` };
-    }
-    return { type: 'probe', text: 'Simulated mode.' };
+    return { type: 'probe', text: 'Simulated mode — please configure your OpenAI API key.' };
   }
 }
