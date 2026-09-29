@@ -1263,9 +1263,9 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           resultDetails.push({
             title: 'Provisioning Details',
             facts: [
-              { title: 'Mailbox Name', value: mailboxName },
-              { title: 'Email Address', value: emailAddress },
-              { title: 'Initial Permissions', value: permissions },
+              { title: 'Mailbox Name', value: String(mailboxName) },
+              { title: 'Email Address', value: String(emailAddress) },
+              { title: 'Initial Permissions', value: typeof permissions === 'string' ? permissions : JSON.stringify(permissions) },
               { title: 'Status', value: 'Active & Ready' }
             ]
           });
