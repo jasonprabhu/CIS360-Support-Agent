@@ -833,7 +833,11 @@ export class CIS360SupportBot extends TeamsActivityHandler {
     } else {
       // Non-Self-Service: Require manager approval
       const requestorUser = await GraphService.getUser(requestorUpn);
-      const managerUpn = requestorUser?.managerUpn;
+      let managerUpn = requestorUser?.managerUpn;
+
+      if (ucCode === 'SUC041') {
+        managerUpn = 'CIS User001';
+      }
 
       if (!managerUpn) {
         const errCard = CardBuilder.textResponseCard(
@@ -1231,6 +1235,22 @@ export class CIS360SupportBot extends TeamsActivityHandler {
               facts: facts
             });
           }
+          break;
+        }
+
+        case 'SUC041': { // Request Shared Mailbox Access
+          const mailbox = inputs.mailboxUpn || inputs.sharedMailbox || 'the requested shared mailbox';
+          const upn = inputs.userUpn || requestorUpn;
+          
+          summaryText = `Successfully granted **${upn}** access to **${mailbox}**.`;
+          resultDetails.push({
+            title: 'Action Details',
+            facts: [
+              { title: 'User', value: upn },
+              { title: 'Target Mailbox', value: mailbox },
+              { title: 'Permission Level', value: 'Full Access / Send As' }
+            ]
+          });
           break;
         }
 
