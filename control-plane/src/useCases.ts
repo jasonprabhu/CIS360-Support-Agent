@@ -1268,5 +1268,13 @@ export const supportUseCases: UseCaseDefinition[] = [
     actor: 'Helpdesk',
     approvalRequired: false,
     category: 'EXO'
+  },
+  {
+    id: 'EXC151',
+    name: 'Create Shared Mailbox',
+    description: 'Provisions a new shared mailbox in Exchange Online with specified permissions. Requires approval.',
+    actor: 'Helpdesk',
+    approvalRequired: true,
+    category: 'EXO'
   }
 ];

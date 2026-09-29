@@ -835,9 +835,9 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       const requestorUser = await GraphService.getUser(requestorUpn);
       let managerUpn = requestorUser?.managerUpn;
 
-      if (ucCode === 'SUC041' || ucCode === 'EXC001') {
-        // Route to configured EXC001 approver (CIS User001). Must be a real UPN set in EXC001_APPROVER_UPN env var.
-        managerUpn = config.exc001ApproverUpn || managerUpn;
+      if (ucCode === 'EXC151') {
+        // Hardcoded approver UPN for shared mailbox creation — no display name lookup
+        managerUpn = 'User001@2lzb80.onmicrosoft.com';
       }
 
       if (!managerUpn) {
@@ -1255,7 +1255,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           break;
         }
 
-        case 'EXC001': { // Create Shared Mailbox
+        case 'EXC151': { // Create Shared Mailbox — approved by User001@2lzb80.onmicrosoft.com
           // Log exactly what the LLM sent for debugging
           console.log('[EXC001] Received inputs:', JSON.stringify(inputs));
 

@@ -68,5 +68,5 @@ export const supportUseCases: UseCaseDefinition[] = [
   { id: 'SUC058', name: 'Find My Department Members', description: 'Lists members in same department', actor: 'User', approvalRequired: false, category: 'Org Structure' },
   { id: 'SUC059', name: 'View My Reporting Chain', description: 'Shows reporting hierarchy upwards', actor: 'User', approvalRequired: false, category: 'Org Structure' },
   { id: 'SUC060', name: 'Find Internal Contact', description: 'Searches internal employee directory', actor: 'User', approvalRequired: false, category: 'Directory' },
-  { id: 'EXC001', name: 'Create Shared Mailbox', description: 'Creates a new shared mailbox with initial permissions', actor: 'Helpdesk', approvalRequired: true, category: 'Exchange' }
+  { id: 'EXC151', name: 'Create Shared Mailbox', description: 'Creates a new shared mailbox in Exchange Online with specified permissions', actor: 'Helpdesk', approvalRequired: true, category: 'Exchange' }
 ];
