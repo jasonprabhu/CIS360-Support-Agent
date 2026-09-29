@@ -166,7 +166,11 @@ export class AIService {
         }
       ];
 
-      const useCaseList = supportUseCases.map(uc => `- ${uc.id}: ${uc.name} (${uc.description})`).join('\n');
+      // EXC151 is excluded from Rule A — it must only be triggered via the multi-agent Rule C playbook
+      const useCaseList = supportUseCases
+        .filter(uc => uc.id !== 'EXC151')
+        .map(uc => `- ${uc.id}: ${uc.name} (${uc.description})`)
+        .join('\n');
 
       const systemPrompt = `You are CIS360, an advanced AI Support Orchestrator.
 Your behavior depends strictly on the user's intent.

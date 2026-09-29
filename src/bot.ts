@@ -866,6 +866,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       let approvalSent = false;
       try {
         const managerUser = await GraphService.getUser(managerUpn);
+        console.log(`[Approval Flow] Manager lookup for ${managerUpn}:`, managerUser ? `found id=${managerUser.id}` : 'NOT FOUND');
         if (managerUser && managerUser.id) {
           const managerId = managerUser.id;
 
@@ -897,13 +898,14 @@ export class CIS360SupportBot extends TeamsActivityHandler {
             }
           );
           approvalSent = true;
+          console.log(`[Approval Flow] Proactive Teams message sent to ${managerUpn}`);
         }
       } catch (err: any) {
-        console.error('[Approval Flow] Failed to send proactive message to manager:', err.message);
+        console.error('[Approval Flow] Failed to send proactive message to manager:', managerUpn, '| Reason:', err.message);
       }
 
-      // Fallback: If proactive chat creation fails (e.g. running in Emulator or tenant restriction),
-      // we send it to the current chat as a simulated manager approval for testing.
+      // Fallback: If proactive chat creation fails (e.g. bot not installed for manager),
+      // send the approval card in the current chat as a visible simulation.
       if (!approvalSent) {
         const approvalCard = M365CardBuilder.managerApprovalRequestCard(
           requestorUpn,
@@ -912,8 +914,8 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           requestId
         );
         const notice = CardBuilder.textResponseCard(
-          'Simulated Manager Chat',
-          `[DEVELOPER MODE] A proactive approval request has been simulated. Approvals are routed to **${managerUpn}**. Use the card below to approve/reject.`,
+          '📋 Approval Pending',
+          `Your request has been logged. The approval card below is shown here because the bot could not reach **${managerUpn}** via proactive Teams message. Once they approve, the action will execute.`,
           'warning'
         );
         await context.sendActivity({ attachments: [notice] });
