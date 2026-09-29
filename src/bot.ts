@@ -1259,19 +1259,23 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           const emailAddress = inputs.emailAddress || inputs.email || `${mailboxName.replace(/\s+/g, '').toLowerCase()}@demo.local`;
           const permissions = inputs.permissions || 'Full Access';
           
+          let actualEmail = emailAddress;
           try {
             // Provision the Shared Mailbox directly (ExchangeService handles the underlying identity creation)
-            await ExchangeService.createSharedMailbox(mailboxName, emailAddress);
+            const created = await ExchangeService.createSharedMailbox(mailboxName, emailAddress);
+            if (created && created.userPrincipalName) {
+              actualEmail = created.userPrincipalName;
+            }
           } catch (err: any) {
             throw new Error(`M365 Provisioning Failed: ${err.message}`);
           }
 
-          summaryText = `Successfully provisioned shared mailbox **${mailboxName}** (${emailAddress}).`;
+          summaryText = `Successfully provisioned shared mailbox **${mailboxName}** (${actualEmail}).`;
           resultDetails.push({
             title: 'Provisioning Details',
             facts: [
               { title: 'Mailbox Name', value: String(mailboxName) },
-              { title: 'Email Address', value: String(emailAddress) },
+              { title: 'Email Address', value: String(actualEmail) },
               { title: 'Initial Permissions', value: typeof permissions === 'string' ? permissions : JSON.stringify(permissions) },
               { title: 'Status', value: 'Active & Ready' }
             ]

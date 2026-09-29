@@ -161,15 +161,21 @@ export class ExchangeService {
 
     const client = this.getClient();
     try {
+      // Fetch the default verified domain for the tenant to prevent invalid domain errors
+      const domainsRes = await client.api('/domains').get();
+      const defaultDomainObj = domainsRes.value.find((d: any) => d.isDefault);
+      const defaultDomain = defaultDomainObj ? defaultDomainObj.id : domainsRes.value[0].id;
+      
+      const mailNickname = cleanUpn.split('@')[0].replace(/[^a-zA-Z0-9-]/g, '');
+      const finalUpn = `${mailNickname}@${defaultDomain}`;
+
       // Direct shared mailbox creation is not natively single-API in Microsoft Graph v1.0.
-      // Production path: Provision a Disabled User Account with Mailbox properties or trigger Exchange Automation Azure function.
       // For this script, we will provision a user account with accountEnabled=false, then call the Exchange Runner.
-      const mailNickname = cleanUpn.split('@')[0];
       const payload = {
         accountEnabled: false,
         displayName,
         mailNickname,
-        userPrincipalName: cleanUpn,
+        userPrincipalName: finalUpn,
         passwordProfile: {
           forceChangePasswordNextSignIn: false,
           password: 'CISShared!' + Math.random().toString(36).substring(2, 10).toUpperCase()
@@ -179,10 +185,10 @@ export class ExchangeService {
       const user = await client.api('/users').post(payload);
       
       // Call mock PowerShell endpoint to enable shared mailbox (simulated)
-      console.log(`[Exchange Service] Invoked Remote PowerShell Cmdlet: Enable-Mailbox -Identity ${cleanUpn} -Shared`);
+      console.log(`[Exchange Service] Invoked Remote PowerShell Cmdlet: Enable-Mailbox -Identity ${finalUpn} -Shared`);
 
       return {
-        userPrincipalName: cleanUpn,
+        userPrincipalName: finalUpn,
         displayName,
         isShared: true,
         sizeGb: 0.0,
