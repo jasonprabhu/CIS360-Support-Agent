@@ -26,14 +26,29 @@ export interface AIEscalateResponse {
   summary: string;
 }
 
-export type AIResponse = AIExecutionResponse | AIProbeResponse | AIGeneralResponse | AIEscalateResponse;
+export interface AITransitionResponse {
+  type: 'transition';
+  sourceAgent: string;
+  targetAgent: string;
+}
+
+export interface AIInvestigationResponse {
+  type: 'investigation';
+  checks: string[];
+  finding: string;
+}
+
+export interface AIRemediationResponse {
+  type: 'remediation';
+  remediation: string;
+  description: string;
+}
+
+export type AIResponse = AIExecutionResponse | AIProbeResponse | AIGeneralResponse | AIEscalateResponse | AITransitionResponse | AIInvestigationResponse | AIRemediationResponse;
 
 export class AIService {
   private static openaiClient: OpenAI | null = null;
 
-  /**
-   * Instantiates and returns the OpenAI client if API Key is configured
-   */
   private static getClient(): OpenAI | null {
     if (this.openaiClient) return this.openaiClient;
 
@@ -43,7 +58,7 @@ export class AIService {
                    config.openaiApiKey.trim() !== '';
 
     if (!hasKey) {
-      console.log('[AI Service] OpenAI Key is empty. Running in SIMULATED AI (offline regex) mode.');
+      console.log('[AI Service] OpenAI Key is empty. Running in SIMULATED AI mode.');
       return null;
     }
 
@@ -55,20 +70,12 @@ export class AIService {
     return this.openaiClient;
   }
 
-  /**
-   * Processes a user's natural language input:
-   * 1. Appends user text to state manager history.
-   * 2. Resolves intent using OpenAI or Simulated parser.
-   * 3. Appends AI response to state manager history (if probe/general).
-   */
   public static async processMessage(userId: string, userText: string): Promise<AIResponse> {
-    // 1. Add user message to history context
     StateManager.addMessage(userId, 'user', userText);
     const history = StateManager.getHistory(userId);
 
     const client = this.getClient();
     if (!client) {
-      // Run the local regex simulator if offline/unconfigured
       const response = await this.simulateAIIntent(userText, history);
       if (response.type === 'probe' || response.type === 'general') {
         StateManager.addMessage(userId, 'assistant', response.text);
@@ -77,7 +84,6 @@ export class AIService {
     }
 
     try {
-      // Define tool schema for OpenAI Function Calling
       const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         {
           type: 'function',
@@ -87,9 +93,9 @@ export class AIService {
             parameters: {
               type: 'object',
               properties: {
-                ucCode: { type: 'string', description: 'The use case code (e.g. SUC001) identifying the task.' },
-                actionDescription: { type: 'string', description: 'A short, user-friendly description of what you are about to do.' },
-                parameters: { type: 'object', description: 'Dynamic arguments collected for the specific use case.', additionalProperties: true }
+                ucCode: { type: 'string' },
+                actionDescription: { type: 'string' },
+                parameters: { type: 'object', additionalProperties: true }
               },
               required: ['ucCode', 'actionDescription', 'parameters']
             }
@@ -99,14 +105,59 @@ export class AIService {
           type: 'function',
           function: {
             name: 'escalate_to_support',
-            description: 'Routes the user to Level 3 Human Support. Use this ONLY if the issue is strictly within M365 Scope (Identity, Exchange, SharePoint, ODFB, Teams) BUT there is no exact automation available.',
+            description: 'Routes the user to Level 3 Human Support.',
             parameters: {
               type: 'object',
               properties: {
-                domain: { type: 'string', enum: ['Identity', 'Exchange', 'SharePoint', 'OneDrive', 'Teams', 'Other M365'], description: 'The M365 domain this issue belongs to.' },
-                summary: { type: 'string', description: 'A concise summary of the exact problem.' }
+                domain: { type: 'string', enum: ['Identity', 'Exchange', 'SharePoint', 'OneDrive', 'Teams', 'Other M365'] },
+                summary: { type: 'string' }
               },
               required: ['domain', 'summary']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'transition_agent',
+            description: 'Visually routes the conversation from a Triage Agent to a Specialist Agent.',
+            parameters: {
+              type: 'object',
+              properties: {
+                sourceAgent: { type: 'string' },
+                targetAgent: { type: 'string' }
+              },
+              required: ['sourceAgent', 'targetAgent']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'present_investigation',
+            description: 'Visually presents a completed diagnostic checklist and preliminary finding.',
+            parameters: {
+              type: 'object',
+              properties: {
+                checks: { type: 'array', items: { type: 'string' } },
+                finding: { type: 'string' }
+              },
+              required: ['checks', 'finding']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'propose_remediation',
+            description: 'Proposes an automated remediation action for human approval.',
+            parameters: {
+              type: 'object',
+              properties: {
+                remediation: { type: 'string' },
+                description: { type: 'string' }
+              },
+              required: ['remediation', 'description']
             }
           }
         }
@@ -114,19 +165,24 @@ export class AIService {
 
       const useCaseList = supportUseCases.map(uc => `- ${uc.id}: ${uc.name} (${uc.description})`).join('\n');
 
-      const systemPrompt = `You are CIS Support Agent, a Level 1 IT Support assistant.
-Your job is to strictly help users and administrators perform IT administrative tasks and nothing else.
-You should collect parameters based on the use case before executing.
+      const systemPrompt = `You are CIS360, an advanced AI Support Orchestrator. 
+Your behavior depends on the user's intent.
 
+RULE A (Automation Hub): If the user asks for a DIRECT administrative action (like resetting a password), use 'execute_m365_task'. 
 Valid Use Cases:
 ${useCaseList}
 
-Probing Flow:
-1. Examine the user's request. Identify if they want to run one of the tasks.
-2. Check if they have provided ALL required parameters. NOTE: For identity security tasks like Password Reset (SUC001), Unlock Account (SUC002), and Reset SSPR (SUC006), NO parameters are required. Execute them immediately.
-3. If ALL required parameters are present, you MUST call the tool 'execute_m365_task' immediately passing the correct 'ucCode', 'actionDescription' and 'parameters'. DO NOT generate conversational text confirming you will execute it. ONLY output the tool call.
-4. If some required parameters are missing, ask for them. NEVER ask for admin credentials or passwords.
-5. If the request is not related to IT administration, you MUST politely refuse to answer. State clearly that your capabilities are strictly limited to IT support. Do NOT provide general knowledge, creative writing, or non-IT assistance under any circumstances.`;
+RULE B (Multi-Agent Troubleshooting Playbook): If the user reports a vague problem (e.g., "my email is not working"), follow this exact multi-turn playbook:
+1. Adopt the "Triage Agent" persona. Ask diagnostic questions one by one (e.g., send/receive? web vs desktop? error messages?).
+2. Once you determine the domain (e.g., Exchange/Outlook), call the 'transition_agent' tool (e.g., source="Triage Agent", target="Exchange & Outlook Specialist Agent").
+3. Immediately adopt the "Exchange & Outlook Specialist" persona. Probe deeper (e.g., authentication loops, other M365 apps, recent password changes).
+4. When you have enough information, say "I have enough information to begin the technical investigation. Investigation in progress..." as conversational text. DO NOT CALL TOOLS YET.
+5. In the VERY NEXT user turn (or immediately if you can), call 'present_investigation' with the checklist of what you found.
+6. If the user acknowledges the investigation or if you choose to bundle it, call 'propose_remediation' (e.g., remediation="Refresh Outlook Session & Revoke Tokens").
+
+IMPORTANT: You can only call ONE tool per turn in this setup, unless the framework supports multiple. If you need to present investigation AND propose remediation, just call 'present_investigation' first, and in your next turn call 'propose_remediation'. 
+
+Keep your conversational tone extremely professional, intelligent, and empathetic. Do NOT break character.`;
 
       const response = await client.chat.completions.create({
         model: config.openaiModel,
@@ -141,11 +197,11 @@ Probing Flow:
       const choice = response.choices[0];
       const message = choice.message;
 
-      // Check if tool execution was called
       if (message.tool_calls && message.tool_calls.length > 0) {
         const toolCall = message.tool_calls[0];
+        const parsed = JSON.parse(toolCall.function.arguments);
+        
         if (toolCall.function.name === 'execute_m365_task') {
-          const parsed = JSON.parse(toolCall.function.arguments);
           return {
             type: 'execute',
             ucCode: parsed.ucCode,
@@ -153,16 +209,20 @@ Probing Flow:
             parameters: parsed.parameters
           };
         } else if (toolCall.function.name === 'escalate_to_support') {
-          const parsed = JSON.parse(toolCall.function.arguments);
           return {
             type: 'escalate',
             domain: parsed.domain,
             summary: parsed.summary
           };
+        } else if (toolCall.function.name === 'transition_agent') {
+          return { type: 'transition', sourceAgent: parsed.sourceAgent, targetAgent: parsed.targetAgent };
+        } else if (toolCall.function.name === 'present_investigation') {
+          return { type: 'investigation', checks: parsed.checks, finding: parsed.finding };
+        } else if (toolCall.function.name === 'propose_remediation') {
+          return { type: 'remediation', remediation: parsed.remediation, description: parsed.description };
         }
       }
 
-      // Fallback: It is a probe response or general conversation
       const replyText = message.content || 'I need more information to process this request.';
       StateManager.addMessage(userId, 'assistant', replyText);
       return {
@@ -171,22 +231,16 @@ Probing Flow:
       };
 
     } catch (err: any) {
-      console.error('[AI Service Error] ChatCompletion call failed:', err.message);
-      // Fallback to simulation if api fails mid-transit
+      console.error('[AI Service Error]', err.message);
       return this.simulateAIIntent(userText, history);
     }
   }
 
-  /**
-   * Simulated AI engine using regex parsing when offline / unconfigured
-   */
   private static async simulateAIIntent(text: string, history: ChatMessage[]): Promise<AIResponse> {
     const cleanText = text.toLowerCase().trim();
-    const ucDirectMatch = cleanText.match(/(suc\d{3})/);
-    if (ucDirectMatch) {
-      const code = ucDirectMatch[1].toUpperCase();
-      return { type: 'probe', text: `Opening form for **${code}**. Please complete the inputs in the card below:` };
+    if (cleanText.includes('suc')) {
+      return { type: 'probe', text: `Opening form.` };
     }
-    return { type: 'probe', text: 'I am in simulated mode and need a direct use case ID (e.g. SUC001).' };
+    return { type: 'probe', text: 'Simulated mode.' };
   }
 }

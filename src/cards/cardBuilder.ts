@@ -598,4 +598,156 @@ export class CardBuilder {
     };
     return this.toAttachment(card);
   }
+
+  // --- Multi-Agent Demo Cards --- //
+
+  public static handoffTransitionCard(sourceAgent: string, targetAgent: string): import('botbuilder').Attachment {
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.4',
+      body: [
+        {
+          type: 'Container',
+          style: 'emphasis',
+          bleed: true,
+          items: [
+            {
+              type: 'TextBlock',
+              text: 'Autonomous Routing In Progress',
+              weight: 'Bolder',
+              size: 'Medium',
+              color: 'Accent'
+            }
+          ]
+        },
+        {
+          type: 'ColumnSet',
+          spacing: 'Large',
+          columns: [
+            {
+              type: 'Column',
+              width: 'auto',
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: '🤖 ' + sourceAgent,
+                  weight: 'Bolder',
+                  isSubtle: true
+                }
+              ]
+            },
+            {
+              type: 'Column',
+              width: 'auto',
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: '➔',
+                  weight: 'Bolder',
+                  color: 'Accent'
+                }
+              ]
+            },
+            {
+              type: 'Column',
+              width: 'auto',
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: '🛡️ ' + targetAgent,
+                  weight: 'Bolder',
+                  color: 'Good'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    return this.toAttachment(card);
+  }
+
+  public static diagnosticChecklistCard(checks: string[], finding: string): import('botbuilder').Attachment {
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.4',
+      body: [
+        {
+          type: 'TextBlock',
+          text: 'Investigation Complete',
+          weight: 'Bolder',
+          size: 'Medium',
+          color: 'Good'
+        },
+        {
+          type: 'FactSet',
+          facts: checks.map(c => ({ title: '✓', value: c }))
+        },
+        {
+          type: 'Container',
+          style: 'emphasis',
+          items: [
+            {
+              type: 'TextBlock',
+              text: '**Preliminary Finding:**',
+              wrap: true
+            },
+            {
+              type: 'TextBlock',
+              text: finding,
+              wrap: true,
+              isSubtle: true
+            }
+          ]
+        }
+      ]
+    };
+    return this.toAttachment(card);
+  }
+
+  public static remediationApprovalCard(remediation: string, description: string): import('botbuilder').Attachment {
+    const card = {
+      $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+      type: 'AdaptiveCard',
+      version: '1.4',
+      body: [
+        {
+          type: 'TextBlock',
+          text: 'Proposed Remediation',
+          weight: 'Bolder',
+          size: 'Medium',
+          color: 'Warning'
+        },
+        {
+          type: 'TextBlock',
+          text: '**Action:** ' + remediation,
+          wrap: true
+        },
+        {
+          type: 'TextBlock',
+          text: description,
+          wrap: true,
+          isSubtle: true
+        }
+      ],
+      actions: [
+        {
+          type: 'Action.Submit',
+          title: 'Approve & Execute',
+          style: 'positive',
+          data: { action: 'demo_approve' }
+        },
+        {
+          type: 'Action.Submit',
+          title: 'Reject',
+          style: 'destructive',
+          data: { action: 'demo_reject' }
+        }
+      ]
+    };
+    return this.toAttachment(card);
+  }
 }
+

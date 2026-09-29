@@ -713,6 +713,17 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       } else if (aiResponse.type === 'general') {
         const card = CardBuilder.textResponseCard('CIS360 Support', aiResponse.text, 'info');
         await context.sendActivity({ attachments: [card] });
+      } else if (aiResponse.type === 'transition') {
+        const card = CardBuilder.handoffTransitionCard(aiResponse.sourceAgent, aiResponse.targetAgent);
+        await context.sendActivity({ attachments: [card] });
+        // Add a follow up automated message to keep the flow going smoothly
+        await context.sendActivity(`I'm your **${aiResponse.targetAgent}**. I have reviewed the triage notes. Let's dig deeper into this.`);
+      } else if (aiResponse.type === 'investigation') {
+        const card = CardBuilder.diagnosticChecklistCard(aiResponse.checks, aiResponse.finding);
+        await context.sendActivity({ attachments: [card] });
+      } else if (aiResponse.type === 'remediation') {
+        const card = CardBuilder.remediationApprovalCard(aiResponse.remediation, aiResponse.description);
+        await context.sendActivity({ attachments: [card] });
       } else if (aiResponse.type === 'escalate') {
         const card = CardBuilder.textResponseCard(
           'L3 Escalation Required',
