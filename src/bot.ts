@@ -26,6 +26,9 @@ import { supportUseCases } from './useCases';
 export class CIS360SupportBot extends TeamsActivityHandler {
   private checkUseCaseEnabled: (context: TurnContext, ucCode: string) => Promise<boolean>;
 
+  // Stores conversation references keyed by UPN (lowercase) so we can send proactive messages
+  public static conversationRefs: Map<string, ConversationReference> = new Map();
+
   constructor() {
     super();
 
@@ -49,8 +52,17 @@ export class CIS360SupportBot extends TeamsActivityHandler {
       const userId = activity.from.id;
       const userName = activity.from.name || 'User';
 
+      // Save the conversation reference for this user so we can send them proactive messages later
+      try {
+        const resolvedUpn = await this.resolveRequestorUpn(context);
+        if (resolvedUpn) {
+          const ref = TurnContext.getConversationReference(activity);
+          CIS360SupportBot.conversationRefs.set(resolvedUpn.toLowerCase(), ref as ConversationReference);
+        }
+      } catch (_) { /* best-effort */ }
+
       // 1. Determine if this message is coming from the Support Agent Channel
-      const isChannelMessage = activity.conversation?.conversationType === 'channel' || 
+      const isChannelMessage = activity.conversation?.conversationType === 'channel' ||
                               activity.conversation?.id === config.supportChannelId;
 
       if (isChannelMessage) {
@@ -109,7 +121,7 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           if (['SUC001', 'SUC002', 'SUC006'].includes(pendingExec.ucCode.toUpperCase())) {
             await IdentitySecurityFlow.handle(context, pendingExec.ucCode, requestorUpn);
           } else {
-            await this.executeM365UseCase(context, pendingExec.ucCode, pendingExec.parameters, true);
+            await this.executeUseCaseWorkflow(context, pendingExec.ucCode, pendingExec.parameters);
           }
         } else {
           StateManager.clearPendingExecution(userId);
@@ -741,10 +753,8 @@ export class CIS360SupportBot extends TeamsActivityHandler {
           return;
         }
 
-        StateManager.setPendingExecution(userId, aiResponse);
-        const useCase = supportUseCases.find(uc => uc.id === ucCode);
-        const ucName = useCase ? useCase.name : ucCode;
-        await context.sendActivity(`I understand you want to **${aiResponse.actionDescription}**. This corresponds to **${ucName}**. Do you want me to execute this? (Yes/No)`);
+        // Trigger the standard execution workflow (self-service or manager approval)
+        await this.executeUseCaseWorkflow(context, ucCode, aiResponse.parameters);
       }
     } catch (err: any) {
       console.error('[NLP Interaction Error] Failed to process message via AI:', err.message);
@@ -815,6 +825,13 @@ export class CIS360SupportBot extends TeamsActivityHandler {
     delete vals.uc;
     const parameters = vals;
 
+    await this.executeUseCaseWorkflow(context, ucCode, parameters);
+  }
+
+  /**
+   * Executes the full use case workflow (evaluating self-service vs manager approval)
+   */
+  private async executeUseCaseWorkflow(context: TurnContext, ucCode: string, parameters: any): Promise<void> {
     // 1. Resolve requestor UPN
     const requestorUpn = await this.resolveRequestorUpn(context);
 
@@ -865,25 +882,17 @@ export class CIS360SupportBot extends TeamsActivityHandler {
 
       let approvalSent = false;
       try {
-        const managerUser = await GraphService.getUser(managerUpn);
-        console.log(`[Approval Flow] Manager lookup for ${managerUpn}:`, managerUser ? `found id=${managerUser.id}` : 'NOT FOUND');
-        if (managerUser && managerUser.id) {
-          const managerId = managerUser.id;
+        const managerUpnLower = managerUpn.toLowerCase();
 
-          // Establish a proactive 1:1 chat with the manager
-          const conversationParams = {
-            bot: context.activity.recipient,
-            members: [{ id: managerId }],
-            isGroup: false,
-            tenantId: context.activity.conversation.tenantId
-          };
+        // Prefer stored conversation reference (most reliable — uses actual Teams User ID)
+        const storedRef = CIS360SupportBot.conversationRefs.get(managerUpnLower);
+        console.log(`[Approval Flow] Stored ref for ${managerUpnLower}:`, storedRef ? 'FOUND' : 'NOT FOUND');
 
-          await context.adapter.createConversationAsync(
+        if (storedRef) {
+          // Use continueConversationAsync with the stored reference — guaranteed to work
+          await context.adapter.continueConversationAsync(
             config.microsoftAppId,
-            'msteams',
-            context.activity.serviceUrl,
-            '',
-            conversationParams as any,
+            storedRef,
             async (managerContext) => {
               const approvalCard = M365CardBuilder.managerApprovalRequestCard(
                 requestorUpn,
@@ -898,10 +907,43 @@ export class CIS360SupportBot extends TeamsActivityHandler {
             }
           );
           approvalSent = true;
-          console.log(`[Approval Flow] Proactive Teams message sent to ${managerUpn}`);
+          console.log(`[Approval Flow] ✅ Proactive approval card sent to ${managerUpn} via stored reference`);
+        } else {
+          // Fallback: try createConversationAsync using AAD Object ID
+          const managerUser = await GraphService.getUser(managerUpn);
+          console.log(`[Approval Flow] Manager lookup for ${managerUpn}:`, managerUser ? `found id=${managerUser.id}` : 'NOT FOUND');
+          if (managerUser && managerUser.id) {
+            const conversationParams = {
+              bot: context.activity.recipient,
+              members: [{ id: managerUser.id }],
+              isGroup: false,
+              tenantId: context.activity.conversation.tenantId
+            };
+            await context.adapter.createConversationAsync(
+              config.microsoftAppId,
+              'msteams',
+              context.activity.serviceUrl,
+              '',
+              conversationParams as any,
+              async (managerContext) => {
+                const approvalCard = M365CardBuilder.managerApprovalRequestCard(
+                  requestorUpn,
+                  ucCode,
+                  parameters,
+                  requestId
+                );
+                const response = await managerContext.sendActivity({ attachments: [approvalCard] });
+                if (response && response.id) {
+                  ApprovalService.setManagerCardActivityId(requestId, response.id);
+                }
+              }
+            );
+            approvalSent = true;
+            console.log(`[Approval Flow] ✅ Proactive approval card sent to ${managerUpn} via createConversationAsync`);
+          }
         }
       } catch (err: any) {
-        console.error('[Approval Flow] Failed to send proactive message to manager:', managerUpn, '| Reason:', err.message);
+        console.error('[Approval Flow] ❌ Failed to send proactive message to:', managerUpn, '| Reason:', err.message);
       }
 
       // Fallback: If proactive chat creation fails (e.g. bot not installed for manager),
@@ -927,8 +969,8 @@ export class CIS360SupportBot extends TeamsActivityHandler {
         // Notify requestor that approval is sent to manager
         const pendingCard = CardBuilder.textResponseCard(
           'Awaiting Approval',
-          `Your request has been forwarded to your manager (**${managerUpn}**) for approval. Once approved, the task will be executed automatically.`,
-          'warning'
+          `Your request has been forwarded to **${managerUpn}** for approval. Once approved, the shared mailbox will be provisioned in Exchange Online.`,
+          'info'
         );
         await context.sendActivity({ attachments: [pendingCard] });
       }
