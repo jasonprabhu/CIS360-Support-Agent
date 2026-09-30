@@ -1,5 +1,6 @@
 import { WorkplaceIntelligenceProvider, useWorkplaceIntelligence } from '../../services/workplaceIntelligence/WorkplaceIntelligenceProvider';
 import Header from './components/Header';
+import AskWorkplaceIntelligence from './components/AskWorkplaceIntelligence';
 import WorkplacePulseHero from './components/WorkplacePulseHero';
 import ServicePulse from './components/ServicePulse';
 import WorkplaceSignals from './components/WorkplaceSignals';
@@ -8,6 +9,7 @@ import AutomationOpportunity from './components/AutomationOpportunity';
 import IntelligenceMap from './components/IntelligenceMap';
 import AIBriefing from './components/AIBriefing';
 import ActionCenter from './components/ActionCenter';
+import IntelligenceDeepDiveModal from './components/IntelligenceDeepDiveModal';
 
 const DashboardContent = () => {
   const { isLoading } = useWorkplaceIntelligence();
@@ -21,6 +23,7 @@ const DashboardContent = () => {
       )}
 
       <Header />
+      <AskWorkplaceIntelligence />
       <WorkplacePulseHero />
       <ServicePulse />
 
@@ -39,6 +42,8 @@ const DashboardContent = () => {
           <AutomationOpportunity />
         </div>
       </div>
+
+      <IntelligenceDeepDiveModal />
     </div>
   );
 };

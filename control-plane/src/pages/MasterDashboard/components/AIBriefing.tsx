@@ -1,7 +1,13 @@
 import { useWorkplaceIntelligence } from '../../../services/workplaceIntelligence/WorkplaceIntelligenceProvider';
 
 const AIBriefing = () => {
-  const { data } = useWorkplaceIntelligence();
+  const { data, setSelectedScenario, setIsDeepDiveOpen, resetRemediation } = useWorkplaceIntelligence();
+
+  const handleOpenScenario = (index: number = 0) => {
+    resetRemediation();
+    setSelectedScenario(data.scenarios[index] || data.scenarios[0]);
+    setIsDeepDiveOpen(true);
+  };
 
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-sm border border-indigo-100 p-6 relative overflow-hidden">
@@ -17,16 +23,30 @@ const AIBriefing = () => {
 
         <ul className="space-y-3 mb-6">
           {data.briefing.map((point, i) => (
-            <li key={i} className="flex gap-3 text-sm text-indigo-900/80 font-medium leading-relaxed">
-              <span className="text-indigo-500 mt-1">•</span>
-              {point}
+            <li 
+              key={i} 
+              onClick={() => handleOpenScenario(i)}
+              className="flex gap-3 text-sm text-indigo-900/80 font-medium leading-relaxed cursor-pointer hover:text-indigo-600 transition-colors group"
+            >
+              <span className="text-indigo-500 mt-1 group-hover:translate-x-0.5 transition-transform">•</span>
+              <span>{point}</span>
             </li>
           ))}
         </ul>
 
         <div className="flex gap-2">
-          <button className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">Investigate</button>
-          <button className="flex-1 py-2 bg-white text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg shadow-sm hover:bg-indigo-50 transition-colors">View Evidence</button>
+          <button 
+            onClick={() => handleOpenScenario(0)}
+            className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-indigo-700 transition-all active:scale-95"
+          >
+            Investigate Root Cause
+          </button>
+          <button 
+            onClick={() => handleOpenScenario(1)}
+            className="flex-1 py-2 bg-white text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg shadow-sm hover:bg-indigo-50 transition-all active:scale-95"
+          >
+            View Telemetry
+          </button>
         </div>
       </div>
     </div>
